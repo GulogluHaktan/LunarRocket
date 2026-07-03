@@ -19,6 +19,14 @@ install_rl_deps() {
     --target "$DEPS_DIR" \
     --upgrade \
     --no-cache-dir \
+    --index-url "https://download.pytorch.org/whl/cpu" \
+    --extra-index-url "https://pypi.org/simple" \
+    "torch>=2.3,<3.0"
+
+  ./python.sh -m pip install \
+    --target "$DEPS_DIR" \
+    --upgrade \
+    --no-cache-dir \
     "gymnasium>=0.29,<1.1" \
     "cloudpickle>=1.2.0" \
     "pandas>=1.0" \

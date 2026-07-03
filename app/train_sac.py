@@ -24,8 +24,8 @@ def _require_training_dependencies() -> None:
         packages = " ".join(missing)
         raise RuntimeError(
             "Missing RL training dependencies: "
-            f"{packages}. Install them inside the Isaac Sim Python environment, or run "
-            "`SAC_INSTALL_DEPS=1 ./scripts/train_sac_docker.sh`."
+            f"{packages}. Run `./scripts/train_sac_docker.sh`; the Docker entrypoint installs "
+            "the RL dependencies into the persistent Isaac cache."
         )
 
 

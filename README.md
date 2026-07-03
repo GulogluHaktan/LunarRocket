@@ -85,7 +85,7 @@ python3 app/preview.py --seed 42 --size 1400
 - `assets/moon_heightmaps/` is used as the NASA DEM cache.
 - `assets/rocket/hopper_lunar.xml` is the tracked MuJoCo rocket source.
 - Generated USD rocket files are cache/output files and are ignored by git.
-- SAC dependencies are installed once into `~/docker/isaac-sim/rl_deps_py312` and reused by later containers.
+- SAC dependencies, including CPU PyTorch, are installed once into `~/docker/isaac-sim/rl_deps_py312` and reused by later containers.
 - Isaac/Omniverse Docker caches live under `~/docker/isaac-sim` by default.
 
 You can override the cache/image:
