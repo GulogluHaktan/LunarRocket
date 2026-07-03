@@ -1,7 +1,9 @@
 from __future__ import annotations
 
 import argparse
+import os
 import sys
+import traceback
 from pathlib import Path
 
 if __package__ in (None, ""):
@@ -37,6 +39,11 @@ def parse_args() -> argparse.Namespace:
     parser.add_argument("--model-out", default="outputs/models/sac_lunar_landing")
     parser.add_argument("--device", default="cpu", choices=("auto", "cpu", "cuda"), help="Torch device for SB3 policy")
     parser.add_argument("--buffer-size", type=int, default=None, help="Override SAC replay buffer size")
+    parser.add_argument(
+        "--skip-close",
+        action="store_true",
+        help="Exit without SimulationApp.close(); useful in Docker when Isaac aborts during shutdown.",
+    )
     return parser.parse_args()
 
 
@@ -62,6 +69,7 @@ def main() -> None:
         }
     )
 
+    exit_code = 0
     try:
         from stable_baselines3 import SAC
         from stable_baselines3.common.monitor import Monitor
@@ -131,8 +139,18 @@ def main() -> None:
         output.parent.mkdir(parents=True, exist_ok=True)
         model.save(str(output))
         print(f"[LunarRocket] SAC model saved: {output}", flush=True)
+    except BaseException:
+        exit_code = 1
+        traceback.print_exc()
     finally:
+        if args.skip_close:
+            print("[LunarRocket] skipping SimulationApp.close for Docker shutdown stability", flush=True)
+            sys.stdout.flush()
+            sys.stderr.flush()
+            os._exit(exit_code)
         simulation_app.close()
+    if exit_code:
+        raise SystemExit(exit_code)
 
 
 if __name__ == "__main__":

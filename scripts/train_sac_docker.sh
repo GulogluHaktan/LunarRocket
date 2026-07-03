@@ -6,6 +6,11 @@ TIMESTEPS="${SAC_TIMESTEPS:-10000}"
 HEADLESS_FLAG="${SAC_HEADLESS_FLAG:---headless}"
 DEVICE="${SAC_DEVICE:-cpu}"
 BUFFER_SIZE="${SAC_BUFFER_SIZE:-50000}"
+CLOSE_APP="${SAC_CLOSE_APP:-0}"
+SKIP_CLOSE_FLAG="--skip-close"
+if [[ "$CLOSE_APP" == "1" || "$CLOSE_APP" == "true" ]]; then
+  SKIP_CLOSE_FLAG=""
+fi
 
 export ISAAC_RENDERER="${ISAAC_RENDERER:-RayTracedLighting}"
 export ISAAC_CAMERA_FLAG="${ISAAC_CAMERA_FLAG:---disable-camera}"
@@ -47,4 +52,4 @@ docker run --rm \
   -v "$CACHE_ROOT/rl_deps_py312:/workspace/isaac_rl_deps" \
   -w /workspace/LunarRocket \
   "$IMAGE" \
-  -lc "umask 000 && /workspace/LunarRocket/scripts/isaac_train_entrypoint.sh $HEADLESS_FLAG --timesteps '$TIMESTEPS' --device '$DEVICE' --buffer-size '$BUFFER_SIZE'"
+  -lc "umask 000 && /workspace/LunarRocket/scripts/isaac_train_entrypoint.sh $HEADLESS_FLAG $SKIP_CLOSE_FLAG --timesteps '$TIMESTEPS' --device '$DEVICE' --buffer-size '$BUFFER_SIZE'"
