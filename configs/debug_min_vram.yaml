@@ -1,0 +1,53 @@
+mode: debug_min_vram
+
+app:
+  headless: true
+  resolution: [640, 360]
+  capture_screenshot: true
+  capture_video: false
+
+physics:
+  gravity: [0, 0, -1.62]
+  physics_dt: 0.01
+
+render:
+  path_tracing: false
+  ray_tracing: false
+  shadows: false
+  reflections: false
+  ambient_occlusion: false
+  bloom: false
+  motion_blur: false
+  anti_aliasing: false
+
+# Debug uses low-quality terrain preset (low_debug: 128x128)
+# Only for minimal VRAM smoke tests. NOT for training.
+# 64x64 resolution is used only in this debug profile.
+terrain:
+  terrain_quality_profile: low_debug
+  source: procedural_only
+  patch_size_m: 40
+  material: simple_gray
+  use_texture: false
+  use_normal_map: false
+
+rocket:
+  type: placeholder
+  use_imported_mujoco_model: false
+  spawn_above_terrain_m: 5.0
+  simple_collision: true
+
+camera:
+  enabled: true
+  position: [0, -35, 20]
+  focal_length: 18
+  clipping_range: [0.1, 500]
+
+sensors:
+  rgb: false
+  depth: false
+  lidar: false
+
+output:
+  screenshot_path: outputs/debug_min_vram.png
+  stats_path: outputs/debug_min_vram_stats.json

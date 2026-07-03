@@ -1,0 +1,35 @@
+seed: 1234
+headless: false
+renderer: RayTracedLighting
+disable_viewport_updates: false
+render_on_step: true
+window_width: 1280
+window_height: 720
+
+stage_units_in_meters: 1.0
+physics_dt: 0.008333333333333333
+rendering_dt: 0.03333333333333333
+physics_scene_path: /World/PhysicsScene
+gravity_mps2: 1.62
+
+sun_intensity: 8000.0
+sun_angle_deg: 0.53
+
+camera:
+  enabled: true
+  prim_path: /World/Rocket/hopper/Camera
+  resolution: [640, 480]
+  frequency_hz: 30.0
+  translation: [0.0, -8.0, 4.0]
+  rotation_deg: [60.0, 0.0, 0.0]
+  focal_length_mm: 24.0
+
+episode:
+  max_steps: 1000
+
+# High-detail landing zone configuration
+# Two-tier terrain: 128x128 global (~32k tri) + 512x512 landing zone (~78k effective tri) = ~110k total
+# Landing zone gets dense microtopography for realistic foot/contact dynamics without full-scene 512x512 cost.
+training:
+  terrain_quality_profile: high_detail_landing
+  description: "Two-tier terrain for maximum detail where it matters. Landing zone uses 512x512 local detail."

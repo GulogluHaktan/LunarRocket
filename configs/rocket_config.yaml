@@ -1,0 +1,24 @@
+prim_path: /World/Rocket
+rigid_body_path: /World/Rocket/hopper
+mjcf_path: assets/rocket/hopper_lunar.xml
+usd_path: assets/rocket/hopper_lunar.usd
+
+mass_kg: 1.63
+visual_scale: 6.0
+
+spawn:
+  altitude_m: 1.2
+  surface_sample_radius_m: 1.2
+  ground_clearance_m: 1.05
+  sample_xy_from_terrain: true
+  terrain_margin_m: 8.0
+  xy_range_m: [-30.0, 30.0]
+  attitude_deg_range: [-5.0, 5.0]
+
+thrust:
+  max_newtons: 30.0
+  default_direction: [0.0, 0.0, 1.0]
+  throttle_range: [0.0, 1.0]
+  site_name: thrust_site
+  tvc_yaw_joint: tvc_yaw_joint
+  tvc_pitch_joint: tvc_pitch_joint

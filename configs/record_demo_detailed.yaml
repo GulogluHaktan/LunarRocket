@@ -1,0 +1,87 @@
+mode: record_demo_detailed
+
+app:
+  headless: true
+  resolution: [960, 540]
+  capture_screenshot: false
+  capture_video: true
+  duration_sec: 5
+  fps: 24
+  frame_count: 120
+
+physics:
+  gravity: [0, 0, -1.62]
+  physics_dt: 0.01
+
+render:
+  path_tracing: false
+  ray_tracing: false
+  shadows: false
+  reflections: false
+  ambient_occlusion: false
+  bloom: false
+  motion_blur: false
+  anti_aliasing: low
+  auto_exposure: false
+  background_color: [0.0, 0.0, 0.0]
+
+# Demo uses high-quality terrain preset (demo_high: 256x256)
+# This matches the training terrain geometry (shared DEM, craters, slopes)
+# while allowing for better visual materials and lighting for rendering.
+terrain:
+  terrain_quality_profile: demo_high
+  source: procedural_only
+  patch_size_m: 80
+  smooth_visual_normals: true
+  material: lunar_gray
+  base_color: [0.36, 0.36, 0.34]
+  roughness: 0.9
+  metallic: 0.0
+  use_texture: false
+  use_normal_map: false
+
+rocket:
+  type: placeholder_detailed
+  use_imported_mujoco_model: false
+  spawn_above_terrain_m: 6.0
+  ground_clearance_m: 0.35
+  descent: true
+  final_clearance_m: 0.9
+  simple_collision: true
+  body_color: [0.85, 0.85, 0.82]
+  nose_color: [0.8, 0.1, 0.08]
+  fin_color: [0.2, 0.2, 0.2]
+  leg_color: [0.6, 0.6, 0.6]
+  flame_marker: true
+  shadow_marker: false
+
+camera:
+  enabled: true
+  path: /World/RenderCamera
+  orbit_radius: 45.0
+  orbit_angle_start: -0.4
+  orbit_angle_end: 0.4
+  camera_height: 22.0
+  target_offset_z: 3.0
+  focal_length: 22
+  clipping_range: [0.1, 1000]
+  follow_rocket: true
+
+light:
+  sun_intensity: 320
+  sun_angle: 0.8
+  sun_rotation: [-35.0, 0.0, 25.0]
+  fill_intensity: 50
+  fill_angle: 1.0
+  fill_rotation: [35.0, 180.0, 0.0]
+
+sensors:
+  rgb: false
+  depth: false
+  lidar: false
+
+output:
+  output_dir: outputs/record_demo_detailed
+  frames_dir: outputs/record_demo_detailed/frames
+  video_path: outputs/record_demo_detailed/demo_detailed.mp4
+  stats_path: outputs/record_demo_detailed/stats.json

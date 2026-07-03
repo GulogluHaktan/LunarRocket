@@ -1,0 +1,81 @@
+mode: record_demo_light
+
+app:
+  headless: true
+  resolution: [960, 540]
+  capture_screenshot: false
+  capture_video: true
+  duration_sec: 5
+  fps: 24
+  frame_count: 120
+
+physics:
+  gravity: [0, 0, -1.62]
+  physics_dt: 0.01
+
+render:
+  path_tracing: false
+  ray_tracing: false
+  shadows: false
+  reflections: false
+  ambient_occlusion: false
+  bloom: false
+  motion_blur: false
+  anti_aliasing: low
+  auto_exposure: false
+  background_color: [0.0, 0.0, 0.0]
+
+# Demo uses high-quality terrain preset (demo_high: 256x256)
+# This matches the training terrain geometry (shared DEM, craters, slopes)
+# while allowing for better visual materials and lighting for rendering.
+terrain:
+  terrain_quality_profile: demo_high
+  source: procedural_only
+  patch_size_m: 80
+  smooth_visual_normals: true
+  material: lunar_gray
+  base_color: [0.38, 0.38, 0.36]
+  roughness: 0.9
+  metallic: 0.0
+  use_texture: false
+  use_normal_map: false
+
+rocket:
+  type: placeholder
+  use_imported_mujoco_model: false
+  spawn_above_terrain_m: 6.0
+  ground_clearance_m: 0.35
+  descent: true
+  final_clearance_m: 0.9
+  simple_collision: true
+  body_color: [0.75, 0.75, 0.72]
+  nose_color: [0.8, 0.1, 0.08]
+  flame_marker: true
+  shadow_marker: false
+
+camera:
+  enabled: true
+  path: /World/RenderCamera
+  position_start: [0, -58, 28]
+  position_end: [0, -52, 27]
+  target_offset_z: 3.0
+  focal_length: 22
+  clipping_range: [0.1, 1000]
+  follow_rocket: true
+
+light:
+  type: distant
+  intensity: 320
+  angle: 0.8
+  direction: [-0.4, -0.6, -1.0]
+
+sensors:
+  rgb: false
+  depth: false
+  lidar: false
+
+output:
+  output_dir: outputs/record_demo_light
+  frames_dir: outputs/record_demo_light/frames
+  video_path: outputs/record_demo_light/demo_light.mp4
+  stats_path: outputs/record_demo_light/stats.json
