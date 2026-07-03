@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 import argparse
+import importlib.util
 import os
 import sys
 import traceback
@@ -14,13 +15,9 @@ from app.config import load_configs
 
 def _require_training_dependencies() -> None:
     missing: list[str] = []
-    try:
-        import gymnasium  # noqa: F401
-    except ImportError:
+    if importlib.util.find_spec("gymnasium") is None:
         missing.append("gymnasium")
-    try:
-        import stable_baselines3  # noqa: F401
-    except ImportError:
+    if importlib.util.find_spec("stable_baselines3") is None:
         missing.append("stable-baselines3")
     if missing:
         packages = " ".join(missing)
