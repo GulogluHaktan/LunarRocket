@@ -25,8 +25,6 @@ mkdir -p \
   "$CACHE_ROOT/documents" \
   "$CACHE_ROOT/rl_deps_py312"
 
-chmod -R ugo+rwX "$CACHE_ROOT/rl_deps_py312"
-
 docker run --rm \
   --name lunar-rocket-sac-train \
   --entrypoint /bin/bash \

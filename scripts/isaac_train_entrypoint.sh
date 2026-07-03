@@ -1,9 +1,10 @@
 #!/usr/bin/env bash
 set -euo pipefail
 
-DEPS_DIR="${LUNAR_RL_DEPS_DIR:-/workspace/isaac_rl_deps}"
+DEPS_ROOT="${LUNAR_RL_DEPS_ROOT:-/workspace/isaac_rl_deps}"
+DEPS_DIR="$DEPS_ROOT/site-packages"
 PROJECT_DIR="/workspace/LunarRocket"
-TMP_ROOT="$DEPS_DIR/.tmp"
+TMP_ROOT="$DEPS_ROOT/tmp"
 
 cd /isaac-sim
 export PYTHONPATH="$DEPS_DIR:$PROJECT_DIR:${PYTHONPATH:-}"
@@ -11,9 +12,8 @@ export TMPDIR="$TMP_ROOT"
 
 install_rl_deps() {
   echo "[LunarRocket] installing RL deps once into: $DEPS_DIR"
-  rm -rf "$DEPS_DIR"/*
+  rm -rf "$DEPS_DIR" "$TMP_ROOT"
   mkdir -p "$DEPS_DIR" "$TMP_ROOT"
-  chmod -R ugo+rwX "$DEPS_DIR" || true
 
   ./python.sh -m pip install \
     --target "$DEPS_DIR" \
