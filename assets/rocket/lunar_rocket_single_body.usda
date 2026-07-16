@@ -1,0 +1,145 @@
+#usda 1.0
+(
+    defaultPrim = "Rocket"
+    kilogramsPerUnit = 1
+    metersPerUnit = 1
+    upAxis = "Z"
+)
+
+def Xform "Rocket" (
+    apiSchemas = ["PhysicsRigidBodyAPI", "PhysicsMassAPI"]
+)
+{
+    point3f physics:centerOfMass = (0, 0, 0.35)
+    float3 physics:diagonalInertia = (0.025, 0.025, 0.008)
+    float physics:mass = 1.63
+    quatf physics:principalAxes = (1, 0, 0, 0)
+
+    def Cylinder "main_body" (
+        apiSchemas = ["PhysicsCollisionAPI"]
+    )
+    {
+        uniform token axis = "Z"
+        double height = 0.75
+        double radius = 0.08
+        color3f[] primvars:displayColor = [(0.72, 0.74, 0.76)]
+        double3 xformOp:translate = (0, 0, 0.38)
+        uniform token[] xformOpOrder = ["xformOp:translate"]
+    }
+
+    def Cone "nose" (
+        apiSchemas = ["PhysicsCollisionAPI"]
+    )
+    {
+        uniform token axis = "Z"
+        double height = 0.18
+        double radius = 0.08
+        color3f[] primvars:displayColor = [(0.9, 0.92, 0.93)]
+        double3 xformOp:translate = (0, 0, 0.845)
+        uniform token[] xformOpOrder = ["xformOp:translate"]
+    }
+
+    def Cylinder "engine" (
+        apiSchemas = ["PhysicsCollisionAPI"]
+    )
+    {
+        uniform token axis = "Z"
+        double height = 0.08
+        double radius = 0.045
+        color3f[] primvars:displayColor = [(0.52, 0.08, 0.05)]
+        double3 xformOp:translate = (0, 0, -0.05)
+        uniform token[] xformOpOrder = ["xformOp:translate"]
+    }
+
+    def Capsule "leg_px" (
+        apiSchemas = ["PhysicsCollisionAPI"]
+    )
+    {
+        uniform token axis = "Z"
+        double height = 0.52
+        double radius = 0.014
+        color3f[] primvars:displayColor = [(0.38, 0.38, 0.38)]
+        quatf xformOp:orient = (0.4132163, 0, 0.9106329, 0)
+        double3 xformOp:translate = (0.2, 0, -0.17)
+        uniform token[] xformOpOrder = ["xformOp:translate", "xformOp:orient"]
+    }
+
+    def Capsule "leg_nx" (
+        apiSchemas = ["PhysicsCollisionAPI"]
+    )
+    {
+        uniform token axis = "Z"
+        double height = 0.52
+        double radius = 0.014
+        color3f[] primvars:displayColor = [(0.38, 0.38, 0.38)]
+        quatf xformOp:orient = (-0.4132163, 0, 0.9106329, 0)
+        double3 xformOp:translate = (-0.2, 0, -0.17)
+        uniform token[] xformOpOrder = ["xformOp:translate", "xformOp:orient"]
+    }
+
+    def Capsule "leg_py" (
+        apiSchemas = ["PhysicsCollisionAPI"]
+    )
+    {
+        uniform token axis = "Z"
+        double height = 0.52
+        double radius = 0.014
+        color3f[] primvars:displayColor = [(0.38, 0.38, 0.38)]
+        quatf xformOp:orient = (-0.4132163, 0.9106329, 0, 0)
+        double3 xformOp:translate = (0, 0.2, -0.17)
+        uniform token[] xformOpOrder = ["xformOp:translate", "xformOp:orient"]
+    }
+
+    def Capsule "leg_ny" (
+        apiSchemas = ["PhysicsCollisionAPI"]
+    )
+    {
+        uniform token axis = "Z"
+        double height = 0.52
+        double radius = 0.014
+        color3f[] primvars:displayColor = [(0.38, 0.38, 0.38)]
+        quatf xformOp:orient = (0.4132163, 0.9106329, 0, 0)
+        double3 xformOp:translate = (0, -0.2, -0.17)
+        uniform token[] xformOpOrder = ["xformOp:translate", "xformOp:orient"]
+    }
+
+    def Sphere "foot_px" (
+        apiSchemas = ["PhysicsCollisionAPI"]
+    )
+    {
+        double radius = 0.035
+        color3f[] primvars:displayColor = [(0.18, 0.18, 0.18)]
+        double3 xformOp:translate = (0.4, 0, -0.355)
+        uniform token[] xformOpOrder = ["xformOp:translate"]
+    }
+
+    def Sphere "foot_nx" (
+        apiSchemas = ["PhysicsCollisionAPI"]
+    )
+    {
+        double radius = 0.035
+        color3f[] primvars:displayColor = [(0.18, 0.18, 0.18)]
+        double3 xformOp:translate = (-0.4, 0, -0.355)
+        uniform token[] xformOpOrder = ["xformOp:translate"]
+    }
+
+    def Sphere "foot_py" (
+        apiSchemas = ["PhysicsCollisionAPI"]
+    )
+    {
+        double radius = 0.035
+        color3f[] primvars:displayColor = [(0.18, 0.18, 0.18)]
+        double3 xformOp:translate = (0, 0.4, -0.355)
+        uniform token[] xformOpOrder = ["xformOp:translate"]
+    }
+
+    def Sphere "foot_ny" (
+        apiSchemas = ["PhysicsCollisionAPI"]
+    )
+    {
+        double radius = 0.035
+        color3f[] primvars:displayColor = [(0.18, 0.18, 0.18)]
+        double3 xformOp:translate = (0, -0.4, -0.355)
+        uniform token[] xformOpOrder = ["xformOp:translate"]
+    }
+}

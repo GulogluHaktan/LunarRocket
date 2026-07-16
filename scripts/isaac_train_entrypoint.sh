@@ -12,30 +12,54 @@ export TMPDIR="$TMP_ROOT"
 
 install_rl_deps() {
   echo "[LunarRocket] installing RL deps once into: $DEPS_DIR"
-  rm -rf "$DEPS_DIR" "$TMP_ROOT"
+  rm -rf "$TMP_ROOT"
   mkdir -p "$DEPS_DIR" "$TMP_ROOT"
 
-  ./python.sh -m pip install \
-    --target "$DEPS_DIR" \
-    --upgrade \
-    --no-cache-dir \
-    --no-deps \
-    "gymnasium>=0.29,<1.1" \
-    "stable-baselines3>=2.3,<3.0" \
-    "cloudpickle>=1.2.0" \
-    "farama-notifications>=0.0.1"
+  if ! ./python.sh -c "import torch" >/dev/null 2>&1; then
+    ./python.sh -m pip install \
+      --target "$DEPS_DIR" \
+      --upgrade \
+      --no-cache-dir \
+      --index-url https://download.pytorch.org/whl/cpu \
+      "torch>=2.3,<2.8"
+  else
+    echo "[LunarRocket] torch already available"
+  fi
 
-  ./python.sh -c "import importlib.util; assert importlib.util.find_spec('gymnasium'); assert importlib.util.find_spec('stable_baselines3'); print('[LunarRocket] RL deps spec check ok')"
+  if ! ./python.sh -c "import gymnasium, pandas, matplotlib" >/dev/null 2>&1; then
+    ./python.sh -m pip install \
+      --target "$DEPS_DIR" \
+      --upgrade \
+      --no-cache-dir \
+      "gymnasium>=0.29,<1.1" \
+      "cloudpickle>=1.2.0" \
+      "farama-notifications>=0.0.1" \
+      "pandas>=1.0" \
+      "matplotlib>=3.5"
+  else
+    echo "[LunarRocket] gymnasium/pandas/matplotlib already available"
+  fi
+
+  if ! ./python.sh -c "from stable_baselines3 import SAC" >/dev/null 2>&1; then
+    ./python.sh -m pip install \
+      --target "$DEPS_DIR" \
+      --upgrade \
+      --no-cache-dir \
+      --no-deps \
+      "stable-baselines3>=2.3,<3.0"
+  else
+    echo "[LunarRocket] stable-baselines3 already available"
+  fi
+
+  ./python.sh -c "import gymnasium, torch; from stable_baselines3 import SAC; print('[LunarRocket] RL deps import check ok')"
   echo "[LunarRocket] RL deps installed"
 }
 
-if [[ -d "$DEPS_DIR/torch" ]] || compgen -G "$DEPS_DIR/torch-*.dist-info" >/dev/null; then
-  echo "[LunarRocket] removing cached PyTorch to avoid mixing with Isaac Sim torch"
-  install_rl_deps
-elif ./python.sh -c "import importlib.util; assert importlib.util.find_spec('gymnasium'); assert importlib.util.find_spec('stable_baselines3')" >/dev/null 2>&1; then
+if ./python.sh -c "import gymnasium, torch; from stable_baselines3 import SAC" >/dev/null 2>&1; then
   echo "[LunarRocket] RL deps found: $DEPS_DIR"
 else
   install_rl_deps
 fi
 
-exec ./python.sh "$PROJECT_DIR/app/train_sac.py" "$@"
+cd "$PROJECT_DIR"
+exec /isaac-sim/python.sh "$PROJECT_DIR/app/train_sac.py" "$@"

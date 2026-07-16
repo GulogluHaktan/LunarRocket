@@ -57,10 +57,7 @@ if [[ "$INSTALL_SYSTEM" == "1" ]]; then
 fi
 
 mkdir -p \
-  "$PROJECT_ROOT/assets/moon_heightmaps" \
   "$PROJECT_ROOT/assets/rocket" \
-  "$PROJECT_ROOT/outputs/models" \
-  "$PROJECT_ROOT/outputs/videos" \
   "$CACHE_ROOT/cache/ov" \
   "$CACHE_ROOT/cache/pip" \
   "$CACHE_ROOT/cache/glcache" \
@@ -69,12 +66,11 @@ mkdir -p \
   "$CACHE_ROOT/documents" \
   "$CACHE_ROOT/rl_deps_py312"
 
-chmod +x "$PROJECT_ROOT"/scripts/*.sh "$PROJECT_ROOT/python.sh"
+chmod +x "$PROJECT_ROOT"/scripts/*.sh
 
 echo "[LunarRocket] checking Docker GPU access"
 "$PROJECT_ROOT/scripts/test_docker_gpu.sh"
 
 echo "[LunarRocket] setup complete"
-echo "[LunarRocket] smoke test: ./scripts/isaac_docker_run.sh 10"
-echo "[LunarRocket] live demo:  ./scripts/run_latest_lunar_demo.sh"
-echo "[LunarRocket] SAC test:   SAC_TIMESTEPS=1000 ./scripts/train_sac_docker.sh"
+echo "[LunarRocket] smoke test: ISAACLAB_MAX_ITERATIONS=1 ISAACLAB_NUM_ENVS=16 ./scripts/train_isaaclab_docker.sh"
+echo "[LunarRocket] SAC train:   ./scripts/train_isaaclab_docker.sh"

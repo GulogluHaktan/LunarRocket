@@ -136,3 +136,13 @@ physics_material:
 
 # Reproducibility: all instances with the same seed must produce identical terrain
 reproducible_seed: true
+
+# 3D Rock models distribution configuration
+rocks:
+  enabled: true
+  total_count: 35                     # Toplam kaya sayısı
+  landing_zone_percentage: 0.75       # Kayaların %75'i yüksek detaylı iniş alanında oluşur
+  min_distance_from_center_m: 2.0     # Roketin iniş ayağına direkt çarpmaması için minimum mesafe
+  landing_zone_radius_m: 12.0         # Yüksek detaylı alanın yarıçapı (24m x 24m yamanın yarısı)
+  outer_radius_m: 35.0                # Geri kalan arka plan kayalarının saçılacağı maksimum mesafe
+  scale_range: [0.12, 0.55]           # Kaya boyutu (12cm ile 55cm arası)

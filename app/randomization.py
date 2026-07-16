@@ -11,6 +11,7 @@ class ResetSample:
     seed: int
     terrain_origin: tuple[int, int]
     rocket_position: tuple[float, float, float]
+    target_position: tuple[float, float, float]
     rocket_euler_deg: tuple[float, float, float]
     crater_count: int
     slope: tuple[float, float]
@@ -77,11 +78,21 @@ def sample_reset(
     attitude_range = _range_pair(spawn, "attitude_deg_range", (-3.0, 3.0))
     altitude = float(spawn.get("altitude_m", 30.0))
 
+    target_x = float(rng.uniform(*xy_range_x))
+    target_y = float(rng.uniform(*xy_range_y))
+    target_position = (target_x, target_y, 0.0)
+
+    # Offset rocket's spawn position laterally from the target landing spot
+    offset_range = _range_pair(spawn, "xy_offset_range_m", (-5.0, 5.0))
+    offset_x = float(rng.uniform(*offset_range))
+    offset_y = float(rng.uniform(*offset_range))
+    
     rocket_position = (
-        float(rng.uniform(*xy_range_x)),
-        float(rng.uniform(*xy_range_y)),
+        target_x + offset_x,
+        target_y + offset_y,
         altitude,
     )
+    
     rocket_euler_deg = (
         float(rng.uniform(*attitude_range)),
         float(rng.uniform(*attitude_range)),
@@ -92,6 +103,7 @@ def sample_reset(
         seed=seed,
         terrain_origin=terrain_origin,
         rocket_position=rocket_position,
+        target_position=target_position,
         rocket_euler_deg=rocket_euler_deg,
         crater_count=crater_count,
         slope=sampled_slope,

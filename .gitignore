@@ -12,11 +12,12 @@ env/
 
 # Isaac/Docker local state
 .isaac_docker_home/
-docker/
 
 # Generated outputs
 outputs/
+logs/
 *.log
+LunarRocket_Code_Reading_Guide_TR.md
 
 # Downloaded/generated heavy assets
 assets/moon_heightmaps/*
@@ -26,9 +27,14 @@ assets/rocket/*.usda
 assets/rocket/*.usdc
 assets/rocket/*/
 !assets/rocket/.gitkeep
-!assets/rocket/hopper_lunar.xml
+!assets/rocket/lunar_rocket_single_body.usda
 
 # OS/editor noise
 .DS_Store
 .idea/
 .vscode/
+
+# Ignore heavy assets & recovery directories
+assets/moon_texture/
+assets/rocks/
+recovered/

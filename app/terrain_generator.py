@@ -144,7 +144,7 @@ class MoonTerrainGenerator:
             local_mesh = self.generate_local_detail_mesh(
                 raw_patch=raw_patch,
                 base_heights=patch,
-                center_pos_m=reset.rocket_position[:2],
+                center_pos_m=reset.target_position[:2],
                 slope=slope,
                 crater_count=max(2, crater_count // 2),
                 roughness_scale=roughness,
@@ -179,54 +179,88 @@ class MoonTerrainGenerator:
         mesh_data: TerrainMeshData,
         display_color: tuple[float, float, float] = (0.42, 0.41, 0.38),
         material_suffix: str = "Base",
+        collision_enabled: bool = True,
     ) -> Any:
         try:
             from pxr import Gf, Sdf, UsdGeom, UsdPhysics
         except ImportError as exc:
             raise RuntimeError("USD/Isaac Python modules are required to create terrain prims") from exc
 
-        if stage.GetPrimAtPath(prim_path):
-            stage.RemovePrim(prim_path)
+        prim = stage.GetPrimAtPath(prim_path)
+        is_new = True
+        if prim and prim.IsValid():
+            if prim.IsA(UsdGeom.Mesh):
+                mesh = UsdGeom.Mesh(prim)
+                is_new = False
+            else:
+                stage.RemovePrim(prim_path)
+                mesh = UsdGeom.Mesh.Define(stage, prim_path)
+        else:
+            mesh = UsdGeom.Mesh.Define(stage, prim_path)
 
-        mesh = UsdGeom.Mesh.Define(stage, prim_path)
-        mesh.CreatePointsAttr([Gf.Vec3f(*point) for point in mesh_data.vertices])
-        mesh.CreateFaceVertexCountsAttr(mesh_data.face_counts)
-        mesh.CreateFaceVertexIndicesAttr(mesh_data.faces)
-        mesh.CreateSubdivisionSchemeAttr("none")
-        mesh.CreateDisplayColorAttr([Gf.Vec3f(*display_color)])
+        if is_new:
+            mesh.CreatePointsAttr(mesh_data.vertices)
+            mesh.CreateFaceVertexCountsAttr(mesh_data.face_counts)
+            mesh.CreateFaceVertexIndicesAttr(mesh_data.faces)
+            mesh.CreateSubdivisionSchemeAttr("none")
+            mesh.CreateDisplayColorAttr([Gf.Vec3f(*display_color)])
+            mesh.CreateDoubleSidedAttr(True)
+            mesh.CreateVisibilityAttr("inherited")
+            if collision_enabled:
+                UsdPhysics.CollisionAPI.Apply(mesh.GetPrim())
+                mesh.GetPrim().CreateAttribute("physxCollision:approximation", Sdf.ValueTypeNames.Token).Set("none")
+                mesh.GetPrim().CreateAttribute("physxCollision:collisionEnabled", Sdf.ValueTypeNames.Bool).Set(True)
+            self._bind_lunar_material(stage, mesh.GetPrim(), display_color, material_suffix)
+        else:
+            mesh.GetPointsAttr().Set(mesh_data.vertices)
+
+        # Update Extent using NumPy for speed
+        vertices_arr = np.asarray(mesh_data.vertices, dtype=np.float32)
+        min_vals = vertices_arr.min(axis=0)
+        max_vals = vertices_arr.max(axis=0)
+        mesh.GetExtentAttr().Set(
+            [
+                Gf.Vec3f(float(min_vals[0]), float(min_vals[1]), float(min_vals[2])),
+                Gf.Vec3f(float(max_vals[0]), float(max_vals[1]), float(max_vals[2])),
+            ]
+        )
+
         smooth_normals = bool(self.config.get("smooth_visual_normals", True))
         if material_suffix == "LandingDetail":
             smooth_normals = bool(self.config.get("local_detail_patch", {}).get("smooth_normals", smooth_normals))
         if smooth_normals:
-            mesh.CreateNormalsAttr([Gf.Vec3f(*normal) for normal in self._calculate_vertex_normals(mesh_data.heights)])
-            mesh.SetNormalsInterpolation("vertex")
+            normals_attr = mesh.GetNormalsAttr()
+            normals_list = self._calculate_vertex_normals(mesh_data.heights)
+            if not normals_attr.IsValid():
+                mesh.CreateNormalsAttr(normals_list)
+                mesh.SetNormalsInterpolation("vertex")
+            else:
+                normals_attr.Set(normals_list)
 
-        prim = mesh.GetPrim()
-        self._bind_lunar_material(stage, prim, display_color, material_suffix)
-        UsdPhysics.CollisionAPI.Apply(prim)
-        prim.CreateAttribute("physxCollision:approximation", Sdf.ValueTypeNames.Token).Set("none")
-        prim.CreateAttribute("physxCollision:collisionEnabled", Sdf.ValueTypeNames.Bool).Set(True)
-        return prim
+        return mesh.GetPrim()
 
     def create_or_update_usd_meshes(self, stage: Any, prim_path: str, mesh_data: TerrainMeshData) -> Any:
         prim = self.create_or_update_usd_mesh(
             stage,
             prim_path,
             mesh_data,
-            display_color=(0.39, 0.38, 0.35),
+            display_color=(0.24, 0.235, 0.215),
             material_suffix="Base",
+            collision_enabled=bool(self.config.get("base_collision_enabled", True)),
         )
         local_path = f"{prim_path}_LandingDetail"
-        if stage.GetPrimAtPath(local_path):
-            stage.RemovePrim(local_path)
         if mesh_data.local_detail_mesh is not None:
             self.create_or_update_usd_mesh(
                 stage,
                 local_path,
                 mesh_data.local_detail_mesh,
-                display_color=(0.39, 0.38, 0.35),
+                display_color=(0.26, 0.25, 0.23),
                 material_suffix="LandingDetail",
+                collision_enabled=bool(self.config.get("local_detail_patch", {}).get("collision_enabled", True)),
             )
+        else:
+            if stage.GetPrimAtPath(local_path):
+                stage.RemovePrim(local_path)
         return prim
 
     def _bind_lunar_material(
@@ -238,23 +272,39 @@ class MoonTerrainGenerator:
     ) -> None:
         try:
             from pxr import Gf, Sdf, UsdPhysics, UsdShade
+            from app.config import resolve_project_path
 
             material_path = f"/World/Looks/LunarRegolith_{suffix}"
             material = UsdShade.Material.Define(stage, material_path)
+            
+            # 1. Bind UsdPreviewSurface as a reliable fallback
             shader = UsdShade.Shader.Define(stage, f"{material_path}/PreviewSurface")
             shader.CreateIdAttr("UsdPreviewSurface")
             shader.CreateInput("diffuseColor", Sdf.ValueTypeNames.Color3f).Set(Gf.Vec3f(*color))
             shader.CreateInput("roughness", Sdf.ValueTypeNames.Float).Set(0.92)
             shader.CreateInput("metallic", Sdf.ValueTypeNames.Float).Set(0.0)
             material.CreateSurfaceOutput().ConnectToSource(shader.ConnectableAPI(), "surface")
+            
+            # 2. Try to bind the OmniPBR MDL material from OmniLRS if available
+            mdl_rel = "assets/moon_texture/LunarRegolith8k.mdl"
+            mdl_path = resolve_project_path(mdl_rel)
+            if mdl_path.exists():
+                mdl_shader = UsdShade.Shader.Define(stage, f"{material_path}/Shader")
+                mdl_shader.CreateIdAttr("mdlMaterial")
+                mdl_shader.SetSourceAsset(Sdf.AssetPath(str(mdl_path)), "mdl")
+                mdl_shader.SetSourceAssetSubIdentifier("LunarRegolith8k", "mdl")
+                material.CreateSurfaceOutput("mdl").ConnectToSource(mdl_shader.ConnectableAPI(), "out")
+            
+            # 3. Apply physics material settings
             physics_config = self.config.get("physics_material", {})
             physics_material = UsdPhysics.MaterialAPI.Apply(material.GetPrim())
             physics_material.CreateStaticFrictionAttr(float(physics_config.get("static_friction", 0.85)))
             physics_material.CreateDynamicFrictionAttr(float(physics_config.get("dynamic_friction", 0.65)))
             physics_material.CreateRestitutionAttr(float(physics_config.get("restitution", 0.02)))
+            
             UsdShade.MaterialBindingAPI.Apply(prim).Bind(material)
-        except Exception:
-            pass
+        except Exception as e:
+            print(f"[LunarRocket] error binding material: {e}", flush=True)
 
     def _condition_dem_patch(self, patch: np.ndarray) -> np.ndarray:
         shaped = patch.astype(np.float32, copy=True)
@@ -381,18 +431,14 @@ class MoonTerrainGenerator:
             ) / 5.0
         return patch + low_noise + noise
 
-    def _calculate_vertex_normals(self, heights: np.ndarray) -> list[tuple[float, float, float]]:
+    def _calculate_vertex_normals(self, heights: np.ndarray) -> list[list[float]]:
         rows, cols = heights.shape
         size_x, size_y = self._terrain_size()
         dy, dx = np.gradient(heights, size_y / max(1, rows - 1), size_x / max(1, cols - 1))
         normals = np.dstack((-dx, -dy, np.ones_like(heights, dtype=np.float32)))
         lengths = np.linalg.norm(normals, axis=2, keepdims=True)
         normals /= np.maximum(lengths, 1e-6)
-        return [
-            (float(normals[row, col, 0]), float(normals[row, col, 1]), float(normals[row, col, 2]))
-            for row in range(rows)
-            for col in range(cols)
-        ]
+        return normals.reshape(-1, 3).tolist()
 
     def _build_mesh(
         self,
@@ -404,15 +450,16 @@ class MoonTerrainGenerator:
         size_x, size_y = size_m if size_m is not None else self._terrain_size()
         vertical_scale = float(self.config.get("vertical_scale", 1.0))
         center_x, center_y = center_m
-        x_values = np.linspace(center_x - size_x / 2.0, center_x + size_x / 2.0, cols)
-        y_values = np.linspace(center_y - size_y / 2.0, center_y + size_y / 2.0, rows)
+        x_values = np.linspace(center_x - size_x / 2.0, center_x + size_x / 2.0, cols, dtype=np.float32)
+        y_values = np.linspace(center_y - size_y / 2.0, center_y + size_y / 2.0, rows, dtype=np.float32)
 
         scaled = heights * vertical_scale
-        vertices = [
-            (float(x), float(y), float(scaled[row, col]))
-            for row, y in enumerate(y_values)
-            for col, x in enumerate(x_values)
-        ]
+        
+        # Fast vectorized mesh generation using NumPy
+        xx, yy = np.meshgrid(x_values, y_values)
+        vertices_np = np.stack((xx, yy, scaled), axis=-1).reshape(-1, 3)
+        vertices = vertices_np.tolist()
+
         faces: list[int] = []
         face_counts: list[int] = []
         for row in range(rows - 1):

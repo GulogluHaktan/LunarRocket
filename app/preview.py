@@ -36,12 +36,12 @@ def main() -> None:
     reset = sample_reset(terrain_config, rocket_config, rng)
     terrain = MoonTerrainGenerator(terrain_config).generate(reset)
 
-    image = _compose_preview(terrain.heights, terrain.size_m, reset.rocket_position, args.size)
+    image = _compose_preview(terrain.heights, terrain.size_m, reset.rocket_position, reset.target_position, args.size)
     output_path = resolve_project_path(args.output)
     output_path.parent.mkdir(parents=True, exist_ok=True)
     image.save(output_path)
     clean_path = output_path.with_name(output_path.stem + "_clean" + output_path.suffix)
-    _compose_clean_preview(terrain.heights, terrain.size_m, reset.rocket_position, args.size).save(clean_path)
+    _compose_clean_preview(terrain.heights, terrain.size_m, reset.rocket_position, reset.target_position, args.size).save(clean_path)
     print(f"[LunarRocket] preview saved: {output_path}")
     print(f"[LunarRocket] clean preview saved: {clean_path}")
 
@@ -50,6 +50,7 @@ def _compose_preview(
     heights: np.ndarray,
     terrain_size_m: tuple[float, float],
     rocket_position: tuple[float, float, float],
+    target_position: tuple[float, float, float],
     size: int,
 ) -> Image.Image:
     title_h = 96
@@ -69,6 +70,11 @@ def _compose_preview(
     draw.text((34, 24), "LunarRocket Isaac Sim Environment", fill=(236, 235, 228), font=font_title)
     draw.text((34, 68), "NASA DEM terrain + procedural craters + MuJoCo hopper rocket", fill=(165, 166, 158), font=font_small)
 
+    # 1. Draw target landing pad (crosshair)
+    target_px = _world_to_pixel(target_position[0], target_position[1], terrain_size_m, size, title_h)
+    _draw_landing_target(draw, target_px, scale=max(1.0, size / 1100.0))
+
+    # 2. Draw rocket spawn position
     rocket_px = _world_to_pixel(rocket_position[0], rocket_position[1], terrain_size_m, size, title_h)
     _draw_hopper_rocket(draw, rocket_px, scale=max(1.0, size / 1100.0))
 
@@ -82,6 +88,7 @@ def _compose_preview(
     stats = (
         f"terrain: {terrain_size_m[0]:.0f}m x {terrain_size_m[1]:.0f}m   "
         f"elevation: {float(np.min(heights)):.2f}m to {float(np.max(heights)):.2f}m   "
+        f"target: x={target_position[0]:.2f}m y={target_position[1]:.2f}m   "
         f"rocket spawn: x={rocket_position[0]:.2f}m y={rocket_position[1]:.2f}m"
     )
     draw.text((34, footer_y + 28), stats, fill=(227, 226, 218), font=font_body)
@@ -98,11 +105,18 @@ def _compose_clean_preview(
     heights: np.ndarray,
     terrain_size_m: tuple[float, float],
     rocket_position: tuple[float, float, float],
+    target_position: tuple[float, float, float],
     size: int,
 ) -> Image.Image:
     shaded = _shaded_relief(heights, contrast=1.0)
     canvas = Image.fromarray(shaded, mode="RGB").resize((size, size), Image.Resampling.LANCZOS)
     draw = ImageDraw.Draw(canvas)
+    
+    # 1. Draw target crosshair
+    target_px = _world_to_pixel(target_position[0], target_position[1], terrain_size_m, size, 0)
+    _draw_landing_target(draw, target_px, scale=max(1.2, size / 950.0))
+    
+    # 2. Draw rocket
     rocket_px = _world_to_pixel(rocket_position[0], rocket_position[1], terrain_size_m, size, 0)
     _draw_hopper_rocket(draw, rocket_px, scale=max(1.2, size / 950.0))
     return canvas
@@ -237,6 +251,26 @@ def _font(size: int) -> ImageFont.FreeTypeFont | ImageFont.ImageFont:
         if Path(path).exists():
             return ImageFont.truetype(path, size)
     return ImageFont.load_default()
+
+
+def _draw_landing_target(draw: ImageDraw.ImageDraw, center: tuple[int, int], scale: float = 1.0) -> None:
+    x, y = center
+    s = scale
+    color = (46, 204, 113) # Nice green
+    width = max(2, int(3 * s))
+    
+    # Outer circle
+    r_outer = int(24 * s)
+    draw.ellipse((x - r_outer, y - r_outer, x + r_outer, y + r_outer), outline=color, width=width)
+    
+    # Inner circle
+    r_inner = int(12 * s)
+    draw.ellipse((x - r_inner, y - r_inner, x + r_inner, y + r_inner), outline=color, width=width)
+    
+    # Crosshair lines
+    length = int(32 * s)
+    draw.line((x - length, y, x + length, y), fill=color, width=width)
+    draw.line((x, y - length, x, y + length), fill=color, width=width)
 
 
 if __name__ == "__main__":

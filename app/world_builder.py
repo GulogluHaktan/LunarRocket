@@ -75,6 +75,9 @@ class LunarLandingWorld:
         terrain_path = str(self.configs["terrain"].get("prim_path", "/World/MoonTerrain"))
         self.terrain_generator.create_or_update_usd_meshes(self.stage, terrain_path, terrain)
 
+        # Spawn some rocks around the landing center from assets/rocks/small_rocks/
+        self._spawn_rocks(terrain, reset_sample)
+
         rocket_position = self._rocket_position_above_surface(reset_sample.rocket_position, terrain)
         print("[LunarRocket] resetting Isaac world physics", flush=True)
         self.world.reset()
@@ -87,10 +90,10 @@ class LunarLandingWorld:
         
         return self.state
 
-    def step(self, throttle: float = 0.0) -> CameraObservation:
+    def step(self, throttle: float = 0.0, gimbal_x: float = 0.0, gimbal_y: float = 0.0) -> CameraObservation:
         if self.world is None:
             raise RuntimeError("LunarLandingWorld.build() must be called before step()")
-        self.rocket.apply_thrust(throttle)
+        self.rocket.apply_thrust(throttle, direction=self._thrust_direction_from_gimbal(gimbal_x, gimbal_y))
         self.world.step(render=bool(self.sim_config.get("render_on_step", self.sensors is not None)))
         if self.sensors is None:
             return CameraObservation(rgb=None)
@@ -112,6 +115,22 @@ class LunarLandingWorld:
     def _camera_enabled(self) -> bool:
         camera_config = self.sim_config.get("camera", {})
         return bool(camera_config.get("enabled", True))
+
+    def _thrust_direction_from_gimbal(self, gimbal_x: float, gimbal_y: float) -> tuple[float, float, float]:
+        max_gimbal_deg = float(self.configs["rocket"].get("thrust", {}).get("max_gimbal_deg", 12.0))
+        gx = float(np.clip(gimbal_x, -1.0, 1.0))
+        gy = float(np.clip(gimbal_y, -1.0, 1.0))
+        max_gimbal_rad = np.deg2rad(max_gimbal_deg)
+        direction = np.array(
+            [
+                np.sin(gx * max_gimbal_rad),
+                np.sin(gy * max_gimbal_rad),
+                np.cos(gx * max_gimbal_rad) * np.cos(gy * max_gimbal_rad),
+            ],
+            dtype=np.float32,
+        )
+        direction /= max(float(np.linalg.norm(direction)), 1e-6)
+        return float(direction[0]), float(direction[1]), float(direction[2])
 
     def _configure_physics(self) -> None:
         gravity = float(self.sim_config.get("gravity_mps2", 1.62))
@@ -251,3 +270,114 @@ class LunarLandingWorld:
                 f"  max_slope_deg: {terrain.max_slope_deg:.2f}",
                 flush=True,
             )
+
+    def _get_terrain_height(self, x: float, y: float, terrain: TerrainMeshData) -> float:
+        size_x, size_y = terrain.size_m
+        rows, cols = terrain.heights.shape
+        row = int(np.clip((y + size_y / 2.0) / size_y * (rows - 1), 0, rows - 1))
+        col = int(np.clip((x + size_x / 2.0) / size_x * (cols - 1), 0, cols - 1))
+        surface_z = float(terrain.heights[row, col])
+        
+        if terrain.local_detail_mesh is not None:
+            local = terrain.local_detail_mesh
+            local_size_x, local_size_y = local.size_m
+            local_x_values = [vertex[0] for vertex in local.vertices]
+            local_y_values = [vertex[1] for vertex in local.vertices]
+            local_min_x = min(local_x_values)
+            local_max_x = max(local_x_values)
+            local_min_y = min(local_y_values)
+            local_max_y = max(local_y_values)
+            if local_min_x <= x <= local_max_x and local_min_y <= y <= local_max_y:
+                local_rows, local_cols = local.heights.shape
+                local_row = int(np.clip((y - local_min_y) / max(local_size_y, 1e-6) * (local_rows - 1), 0, local_rows - 1))
+                local_col = int(np.clip((x - local_min_x) / max(local_size_x, 1e-6) * (local_cols - 1), 0, local_cols - 1))
+                surface_z = float(local.heights[local_row, local_col])
+        return surface_z
+
+    def _spawn_rocks(self, terrain: TerrainMeshData, reset_sample) -> None:
+        try:
+            from pxr import UsdGeom, Sdf, UsdPhysics, Gf
+            import random
+            from app.config import resolve_project_path
+            
+            rocks_config = self.configs["terrain"].get("rocks", {})
+            if not bool(rocks_config.get("enabled", True)):
+                return
+            
+            rocks_group_path = "/World/Rocks"
+            rocks_group_prim = self.stage.GetPrimAtPath(rocks_group_path)
+            
+            # Find all available rock USD files
+            rocks_dir = resolve_project_path("assets/rocks/small_rocks")
+            if not rocks_dir.exists():
+                return
+            
+            rock_files = list(rocks_dir.glob("rock_*.usd"))
+            if not rock_files:
+                return
+                
+            # Load spawn parameters from configs
+            total_rocks = int(rocks_config.get("total_count", 35))
+            lz_percentage = float(rocks_config.get("landing_zone_percentage", 0.75))
+            min_dist = float(rocks_config.get("min_distance_from_center_m", 2.0))
+            lz_radius = float(rocks_config.get("landing_zone_radius_m", 12.0))
+            outer_radius = float(rocks_config.get("outer_radius_m", 35.0))
+            scale_min, scale_max = rocks_config.get("scale_range", [0.12, 0.55])
+            collision_enabled = bool(rocks_config.get("collision_enabled", True))
+            
+            center_x, center_y = reset_sample.target_position[:2]
+            
+            # If rocks group doesn't exist, define it and populate the pool once
+            if not rocks_group_prim:
+                UsdGeom.Xform.Define(self.stage, rocks_group_path)
+                for i in range(total_rocks):
+                    rock_prim_path = f"{rocks_group_path}/Rock_{i}"
+                    rock_prim = self.stage.DefinePrim(rock_prim_path)
+                    rock_file = random.choice(rock_files)
+                    rock_prim.GetReferences().AddReference(str(rock_file))
+                    
+                    # Apply transform ops once
+                    xformable = UsdGeom.Xformable(rock_prim)
+                    xformable.ClearXformOpOrder()
+                    xformable.AddTranslateOp()
+                    xformable.AddRotateXYZOp()
+                    xformable.AddScaleOp()
+                    
+                    if collision_enabled:
+                        UsdPhysics.CollisionAPI.Apply(rock_prim)
+                        rock_prim.CreateAttribute("physxCollision:approximation", Sdf.ValueTypeNames.Token).Set("convexHull")
+                        rock_prim.CreateAttribute("physxCollision:collisionEnabled", Sdf.ValueTypeNames.Bool).Set(True)
+            
+            # Now, update positions/scales/rotations of the existing pool (extremely fast!)
+            for i in range(total_rocks):
+                rock_prim_path = f"{rocks_group_path}/Rock_{i}"
+                rock_prim = self.stage.GetPrimAtPath(rock_prim_path)
+                if not rock_prim:
+                    continue
+                
+                # Roll location
+                if random.random() < lz_percentage:
+                    r = random.uniform(min_dist, lz_radius)
+                else:
+                    r = random.uniform(lz_radius, outer_radius)
+                
+                angle = random.uniform(0, 2 * np.pi)
+                rx = center_x + r * np.cos(angle)
+                ry = center_y + r * np.sin(angle)
+                rz = self._get_terrain_height(rx, ry, terrain)
+                
+                # Retrieve existing xform ops and set values directly
+                xformable = UsdGeom.Xformable(rock_prim)
+                ordered_ops = xformable.GetOrderedXformOps()
+                
+                scale = random.uniform(scale_min, scale_max)
+                rot_x = random.uniform(0, 360)
+                rot_y = random.uniform(0, 360)
+                rot_z = random.uniform(0, 360)
+                
+                ordered_ops[0].Set(Gf.Vec3d(rx, ry, rz))
+                ordered_ops[1].Set(Gf.Vec3f(rot_x, rot_y, rot_z))
+                ordered_ops[2].Set(Gf.Vec3f(scale, scale, scale))
+                
+        except Exception as e:
+            print(f"[LunarRocket] warning: could not spawn/update rocks: {e}", flush=True)

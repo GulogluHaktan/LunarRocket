@@ -1,0 +1,13 @@
+ARG ISAAC_SIM_IMAGE=nvcr.io/nvidia/isaac-sim:6.0.1
+FROM ${ISAAC_SIM_IMAGE}
+
+USER root
+ENV TERM=xterm
+ENV DEBIAN_FRONTEND=noninteractive
+
+RUN apt-get update && apt-get install -y --no-install-recommends \
+    build-essential \
+    cmake \
+    git \
+    && rm -rf /var/lib/apt/lists/*
+

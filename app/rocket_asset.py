@@ -75,6 +75,7 @@ class RocketAsset:
         mass_api = UsdPhysics.MassAPI.Apply(physics_prim)
         mass_api.CreateMassAttr(self.mass_kg)
         physics_prim.CreateAttribute("physxRigidBody:disableGravity", Sdf.ValueTypeNames.Bool).Set(False)
+        self._rigid_prim = self._create_rigid_view(str(physics_prim.GetPath()), world)
 
         return physics_prim
 
@@ -86,9 +87,8 @@ class RocketAsset:
     ) -> RocketState:
         if self._rigid_prim is not None:
             quat = self._euler_xyz_to_quat_wxyz(euler_deg)
-            self._rigid_prim.set_world_pose(position=np.array(position), orientation=np.array(quat))
-            self._rigid_prim.set_linear_velocity(np.zeros(3))
-            self._rigid_prim.set_angular_velocity(np.zeros(3))
+            self._set_rigid_world_pose(position, quat)
+            self._set_rigid_velocities(np.zeros(3), np.zeros(3))
         elif self._prim is not None:
             self._set_xform_pose(self._prim, position, euler_deg)
         if log:
@@ -116,10 +116,69 @@ class RocketAsset:
 
         if self._rigid_prim is not None:
             try:
-                self._rigid_prim.apply_force(force)
+                if hasattr(self._rigid_prim, "apply_force"):
+                    self._rigid_prim.apply_force(force)
+                elif hasattr(self._rigid_prim, "apply_forces"):
+                    self._rigid_prim.apply_forces(np.asarray([force], dtype=np.float32))
             except AttributeError:
                 pass
         return force
+
+    def get_world_pose(self) -> tuple[np.ndarray, np.ndarray] | None:
+        if self._rigid_prim is None:
+            return None
+        try:
+            if hasattr(self._rigid_prim, "get_world_pose"):
+                position, orientation = self._rigid_prim.get_world_pose()
+                return np.asarray(position, dtype=np.float32), np.asarray(orientation, dtype=np.float32)
+            if hasattr(self._rigid_prim, "get_world_poses"):
+                positions, orientations = self._rigid_prim.get_world_poses()
+                return np.asarray(positions[0], dtype=np.float32), np.asarray(orientations[0], dtype=np.float32)
+        except Exception:
+            return None
+        return None
+
+    def _create_rigid_view(self, prim_path: str, world: Any | None) -> Any | None:
+        try:
+            try:
+                from isaacsim.core.prims import RigidPrim
+            except ImportError:
+                from omni.isaac.core.prims import RigidPrim
+            rigid_view = RigidPrim(prim_paths_expr=prim_path, name="lunar_rocket_body")
+            if world is not None and getattr(world, "scene", None) is not None:
+                try:
+                    return world.scene.add(rigid_view)
+                except Exception:
+                    pass
+            return rigid_view
+        except Exception as exc:
+            print(f"[LunarRocket] warning: could not create rigid body view for thrust control: {exc}", flush=True)
+            return None
+
+    def _set_rigid_world_pose(
+        self,
+        position: tuple[float, float, float],
+        quaternion_wxyz: tuple[float, float, float, float],
+    ) -> None:
+        assert self._rigid_prim is not None
+        if hasattr(self._rigid_prim, "set_world_pose"):
+            self._rigid_prim.set_world_pose(position=np.array(position), orientation=np.array(quaternion_wxyz))
+        elif hasattr(self._rigid_prim, "set_world_poses"):
+            self._rigid_prim.set_world_poses(
+                positions=np.asarray([position], dtype=np.float32),
+                orientations=np.asarray([quaternion_wxyz], dtype=np.float32),
+            )
+
+    def _set_rigid_velocities(self, linear: np.ndarray, angular: np.ndarray) -> None:
+        assert self._rigid_prim is not None
+        if hasattr(self._rigid_prim, "set_linear_velocity"):
+            self._rigid_prim.set_linear_velocity(linear)
+        elif hasattr(self._rigid_prim, "set_linear_velocities"):
+            self._rigid_prim.set_linear_velocities(np.asarray([linear], dtype=np.float32))
+        if hasattr(self._rigid_prim, "set_angular_velocity"):
+            self._rigid_prim.set_angular_velocity(angular)
+        elif hasattr(self._rigid_prim, "set_angular_velocities"):
+            self._rigid_prim.set_angular_velocities(np.asarray([angular], dtype=np.float32))
 
     def _convert_mjcf_to_usd(self) -> Path:
         try:

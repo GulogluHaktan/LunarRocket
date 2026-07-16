@@ -51,7 +51,9 @@ class IsaacWorldAdapter:
     ) -> tuple[RocketKinematicState, dict[str, np.ndarray], TerrainSafetyState, ContactState]:
         action = np.asarray(action, dtype=np.float32)
         throttle = float(np.clip(action[0], 0.0, 1.0)) if action.size else 0.0
-        self.env.step(throttle=throttle)
+        gimbal_x = float(np.clip(action[1], -1.0, 1.0)) if action.size > 1 else 0.0
+        gimbal_y = float(np.clip(action[2], -1.0, 1.0)) if action.size > 2 else 0.0
+        self.env.step(throttle=throttle, gimbal_x=gimbal_x, gimbal_y=gimbal_y)
         state = self._build_state(action)
         sensors = self._build_sensor_dict(state)
         terrain = self._build_terrain_state(state)
@@ -89,10 +91,16 @@ class IsaacWorldAdapter:
 
     def _rocket_position(self) -> np.ndarray:
         assert self.env.state is not None
+        pose = self.env.rocket.get_world_pose()
+        if pose is not None:
+            return pose[0]
         return np.asarray(self.env.state.rocket.position, dtype=np.float32)
 
     def _rocket_quaternion(self) -> np.ndarray:
         assert self.env.state is not None
+        pose = self.env.rocket.get_world_pose()
+        if pose is not None:
+            return pose[1]
         euler = np.deg2rad(np.asarray(self.env.state.rocket.euler_deg, dtype=np.float32))
         roll, pitch, yaw = [float(v) for v in euler]
         cr, sr = np.cos(roll / 2.0), np.sin(roll / 2.0)
@@ -111,7 +119,7 @@ class IsaacWorldAdapter:
     def _target_position(self) -> np.ndarray:
         if self.env.state is None:
             return np.zeros(3, dtype=np.float32)
-        x, y, _ = self.env.state.reset_sample.rocket_position
+        x, y, _ = self.env.state.reset_sample.target_position
         z = self._terrain_height_at(float(x), float(y))
         return np.array([x, y, z], dtype=np.float32)
 
