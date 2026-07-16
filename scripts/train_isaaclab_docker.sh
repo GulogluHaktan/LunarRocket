@@ -2,6 +2,40 @@
 set -euo pipefail
 
 PROJECT_ROOT="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
+
+# =======================================================
+# Automatic Host Dependencies & CDI Setup (Ubuntu/Debian)
+# =======================================================
+if [[ -f /etc/debian_version ]]; then
+  # 1. Install Docker if missing
+  if ! command -v docker &> /dev/null; then
+    echo "[Setup] Docker is missing. Installing docker.io (requires sudo)..."
+    sudo apt-get update && sudo apt-get install -y docker.io curl gpg
+    sudo systemctl enable --now docker
+    sudo usermod -aG docker "$USER"
+    echo "[Setup] Docker installed. You may need to run 'newgrp docker' or re-login if docker commands fail."
+  fi
+
+  # 2. Install NVIDIA Container Toolkit if missing
+  if ! command -v nvidia-ctk &> /dev/null; then
+    echo "[Setup] nvidia-container-toolkit is missing. Setting up official repository..."
+    sudo apt-get update && sudo apt-get install -y curl gpg
+    curl -fsSL https://nvidia.github.io/libnvidia-container/gpgkey | sudo gpg --dearmor -o /usr/share/keyrings/nvidia-container-toolkit-keyring.gpg
+    curl -s -L https://nvidia.github.io/libnvidia-container/stable/deb/nvidia-container-toolkit.list | \
+      sed 's#deb https://#deb [signed-by=/usr/share/keyrings/nvidia-container-toolkit-keyring.gpg] https://#g' | \
+      sudo tee /etc/apt/sources.list.d/nvidia-container-toolkit.list
+    sudo apt-get update
+    sudo apt-get install -y nvidia-container-toolkit
+  fi
+
+  # 3. Generate NVIDIA CDI specification if missing
+  if [[ ! -f "/etc/cdi/nvidia.yaml" ]]; then
+    echo "[Setup] Generating NVIDIA CDI specification (/etc/cdi/nvidia.yaml)..."
+    sudo nvidia-ctk cdi generate --output="/etc/cdi/nvidia.yaml"
+    echo "[Setup] Restarting Docker to apply CDI updates..."
+    sudo systemctl restart docker
+  fi
+fi
 ISAACLAB_CACHE="${ISAACLAB_CACHE:-$HOME/docker/isaac-lab}"
 ISAACLAB_HOST_ROOT="${ISAACLAB_HOST_ROOT:-$ISAACLAB_CACHE/IsaacLab}"
 ISAACLAB_REPO="${ISAACLAB_REPO:-https://github.com/isaac-sim/IsaacLab.git}"
