@@ -68,19 +68,42 @@ class LunarLandingWorld:
             raise RuntimeError("LunarLandingWorld.build() must be called before reset()")
 
         self.terrain_generator.load_dem()
-        reset_sample = sample_reset(self.configs["terrain"], self.configs["rocket"], self.rng)
-        print("[LunarRocket] generating terrain mesh", flush=True)
-        terrain = self.terrain_generator.generate(reset_sample)
-        print("[LunarRocket] creating terrain USD mesh", flush=True)
-        terrain_path = str(self.configs["terrain"].get("prim_path", "/World/MoonTerrain"))
-        self.terrain_generator.create_or_update_usd_meshes(self.stage, terrain_path, terrain)
 
-        # Spawn some rocks around the landing center from assets/rocks/small_rocks/
-        self._spawn_rocks(terrain, reset_sample)
+        if self.state is None:
+            # First reset: generate the static terrain, spawn rocks, and reset the physics world once
+            reset_sample = sample_reset(self.configs["terrain"], self.configs["rocket"], self.rng)
+            self._cached_terrain_sample = reset_sample
+            
+            print("[LunarRocket] generating terrain mesh", flush=True)
+            terrain = self.terrain_generator.generate(reset_sample)
+            print("[LunarRocket] creating terrain USD mesh", flush=True)
+            terrain_path = str(self.configs["terrain"].get("prim_path", "/World/MoonTerrain"))
+            self.terrain_generator.create_or_update_usd_meshes(self.stage, terrain_path, terrain)
 
-        rocket_position = self._rocket_position_above_surface(reset_sample.rocket_position, terrain)
-        print("[LunarRocket] resetting Isaac world physics", flush=True)
-        self.world.reset()
+            # Spawn some rocks around the landing center from assets/rocks/small_rocks/
+            self._spawn_rocks(terrain, reset_sample)
+            self._cached_terrain = terrain
+            
+            rocket_position = self._rocket_position_above_surface(reset_sample.rocket_position, terrain)
+            print("[LunarRocket] resetting Isaac world physics", flush=True)
+            self.world.reset()
+        else:
+            # Subsequent resets: reuse the cached terrain mesh and skip heavy world.reset()
+            terrain = self._cached_terrain
+            raw_sample = sample_reset(self.configs["terrain"], self.configs["rocket"], self.rng)
+            
+            # Reconstruct ResetSample using the cached static terrain parameters
+            from dataclasses import replace
+            reset_sample = replace(
+                raw_sample,
+                seed=self._cached_terrain_sample.seed,
+                terrain_origin=self._cached_terrain_sample.terrain_origin,
+                crater_count=self._cached_terrain_sample.crater_count,
+                slope=self._cached_terrain_sample.slope,
+                roughness_scale=self._cached_terrain_sample.roughness_scale
+            )
+            rocket_position = self._rocket_position_above_surface(reset_sample.rocket_position, terrain)
+
         print("[LunarRocket] resetting rocket pose", flush=True)
         rocket_state = self.rocket.reset_pose(rocket_position, reset_sample.rocket_euler_deg)
         self.state = EnvironmentState(reset_sample, terrain, rocket_state)

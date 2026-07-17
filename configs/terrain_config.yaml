@@ -95,14 +95,14 @@ local_detail_patch:
   regolith_grain_smoothing_passes: 1
   regolith_ripple_scale: 0.010
   regolith_ripple_wavelength_m: [0.18, 0.42]
-  micro_feature_count: 650     # Small pebbles/pits visible near landing feet
+  micro_feature_count: 0     # Small pebbles/pits visible near landing feet
   micro_feature_radius_m_range: [0.030, 0.130]
   micro_feature_height_m_range: [-0.030, 0.060]
   micro_feature_sharpness: 0.70
   micro_pit_probability: 0.62
   micro_pit_rim_ratio: 0.28
   footprint_detail_radius_m: 4.8
-  footprint_micro_feature_count: 360
+  footprint_micro_feature_count: 0
   footprint_micro_feature_radius_m_range: [0.025, 0.100]
   footprint_micro_feature_height_m_range: [-0.025, 0.055]
   smooth_normals: false        # Make foot-scale geometry read in close-up views

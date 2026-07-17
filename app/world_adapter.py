@@ -240,7 +240,15 @@ def _height_at_mesh(
     return top * (1.0 - rf) + bottom * rf
 
 
+_BOUNDS_CACHE: dict[int, tuple[float, float, float, float]] = {}
+
+
 def _mesh_bounds(vertices: list[tuple[float, float, float]]) -> tuple[float, float, float, float]:
+    vid = id(vertices)
+    if vid in _BOUNDS_CACHE:
+        return _BOUNDS_CACHE[vid]
     xs = [v[0] for v in vertices]
     ys = [v[1] for v in vertices]
-    return min(xs), max(xs), min(ys), max(ys)
+    bounds = (min(xs), max(xs), min(ys), max(ys))
+    _BOUNDS_CACHE[vid] = bounds
+    return bounds
