@@ -66,13 +66,13 @@
 \def\textpagefraction{.001}
 
 \shorttitle{Terrain fine-detail blending in lunar-landing simulation}
-\shortauthors{H. Y. Güloğlu}
+\shortauthors{H. Güloğlu et~al.}
 
 \title[mode = title]{Terrain Fine-Detail Blending in Lunar-Landing
 Simulations: Comparing Smoothstep, Gaussian, and Hybrid Blending Methods
 in Isaac Lab}
 
-\author[1]{Haktan Yusuf Güloğlu}
+\author[1]{Haktan Güloğlu}
 \cormark[1]
 \ead{haktanguloglu24@gmail.com}
 \credit{Conceptualization, Methodology, Software, Validation, Formal
@@ -80,9 +80,14 @@ analysis, Investigation, Resources, Data curation, Writing -- original
 draft, Writing -- review \& editing, Visualization, Supervision, Project
 administration}
 
+\author[1]{Eyüp Altuğ Tunç}
+\credit{Investigation, Writing -- review \& editing}
+
+\author[1]{Muhammed Emin Onay}
+\credit{Investigation, Writing -- review \& editing}
+
 \affiliation[1]{organization={Sakarya University, National Technology
 Workshop, Artificial Intelligence Center},
-                city={Sakarya},
                 country={Türkiye}}
 
 \cortext[1]{Corresponding author.}
@@ -147,15 +152,15 @@ blending \sep Continuity analysis
 
 \section*{Acknowledgment}
 This work was carried out without any external funding or institutional
-support, using the author's own computational resources (a local NVIDIA
-GPU workstation). The author thanks the NVIDIA team for developing Isaac
+support, using the authors' own computational resources (a local NVIDIA
+GPU workstation). The authors thank the NVIDIA team for developing Isaac
 Lab and Isaac Sim as open-source software, and the open-source software
 libraries used in the experimental infrastructure (Stable-Baselines3,
 PyTorch, NumPy, SciPy, TensorBoard).
 
 \section*{Declaration of competing interest}
-The author declares that he has no known competing financial interests
-or personal relationships related to this work.
+The authors declare that they have no known competing financial
+interests or personal relationships related to this work.
 
 \section*{Data and code availability}
 The analytic evaluation code used in this study (the NumPy port of the
@@ -164,9 +169,10 @@ scripts), the production environment code (the Isaac Lab task definition
 and the selectable integration of the three methods via
 ISAACLAB\_TERRAIN\_BLEND\_METHOD), and the raw experimental outputs (the
 thirty-seed continuity measurements, the four ablation sweeps, and the
-real-training TensorBoard logs) are stored in the author's project
-repository and are available from the author upon reasonable request.
-The code is planned to be moved to a publicly accessible repository
+real-training TensorBoard logs) are stored in the authors' project
+repository and are available from the corresponding author upon
+reasonable request. The code is planned to be moved to a publicly
+accessible repository
 during the manuscript review process.
 
 \printcredits
@@ -175,17 +181,27 @@ during the manuscript review process.
 \bibliography{refs}
 
 \bio{photo-haktan}
-Haktan Yusuf Güloğlu graduated at the top of his class from Profilo
+Haktan Güloğlu graduated at the top of his class from Profilo
 Vocational and Technical Anatolian High School and is currently an
 undergraduate student in Computer Engineering at Sakarya University. He
 works as a student researcher at Sakarya University's National
 Technology Workshop Artificial Intelligence Center, where his research
 interests center on reinforcement learning, procedural simulation
 environments, and the numerical accuracy of contact geometry in physics
-engines. He carried out this study's entire pipeline --- from
-conceptualization and experimental design through the software
-implementation to the statistical analysis and writing --- as its sole
-author.
+engines. He led this study's conceptualization, experimental design,
+software implementation, statistical analysis, and writing.
+\endbio
+
+\bio{}
+Eyüp Altuğ Tunç is an undergraduate student in Mechatronics Engineering
+at Sakarya University of Applied Sciences and a co-author of the
+present study.
+\endbio
+
+\bio{}
+Muhammed Emin Onay is an undergraduate student in Mechatronics
+Engineering at Sakarya University of Applied Sciences and a co-author
+of the present study.
 \endbio
 
 \end{document}
