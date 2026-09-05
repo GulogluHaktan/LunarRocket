@@ -42,6 +42,24 @@ based on other criteria such as boundary continuity (analytically in
 favor of Gaussian and hybrid) or computational cost (in favor of
 smoothstep).
 
+\subsection*{Implications for autonomous control system design}
+For engineers designing the training pipeline of an autonomous control
+system, the key takeaway is not which blending function to prefer but
+that a simulator's internal geometry-generation choices are themselves
+part of the control system's design space and warrant the same
+quantitative scrutiny as the controller or the reward function. A
+world-model artifact with a large, statistically confirmed effect on
+boundary continuity (here, close to three orders of magnitude) need not
+automatically threaten the learned controller's deployed behavior; this
+study shows a case where a robust simulation-fidelity defect and a
+distinguishable control-performance regression can, at a given training
+scale, come apart. The practical implication is that such simulator
+artifacts should be audited and corrected on their own engineering
+merits --- because a discontinuity in a physically queryable contact
+geometry is exactly the kind of defect a real vehicle's contact sensors
+would not tolerate --- rather than assumed safe merely because a single
+training run did not reveal a resulting control-performance gap.
+
 Three concrete directions are proposed for future work. First, because
 $n=3$ still has low statistical power, the real-training comparison
 should be extended with at least five to ten more independent seeds to

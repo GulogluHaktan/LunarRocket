@@ -16,6 +16,19 @@ lunar terrain that layers craters, rocks, and centimeter-scale regolith
 texture on top of a macro surface derived from a real digital elevation
 model (DEM).
 
+More broadly, this places the study in the domain of simulation design
+for autonomous control systems: the fidelity of a training environment's
+world model is not a cosmetic implementation detail but a design
+variable that determines what contact behavior a learned controller is
+actually exposed to before deployment. In any autonomous system whose
+controller is trained rather than derived analytically --- landing
+vehicles, legged robots, or other contact-rich autonomous platforms ---
+an artifact introduced by the simulator itself, rather than by the
+physical system being modeled, risks being learned as if it were real
+physics. Terrain blending is examined here as a concrete, measurable
+instance of this general simulation-design problem for autonomous
+control systems.
+
 In procedural multi-resolution terrain of this kind, two layers are
 typically used to keep the computation and memory budget bounded: a
 low-resolution global surface covering a wide area, and a
