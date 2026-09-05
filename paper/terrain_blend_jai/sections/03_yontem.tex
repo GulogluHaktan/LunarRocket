@@ -1,0 +1,355 @@
+\section{Yöntem}
+\label{sec:yontem}
+
+Bu bölüm beş alt bölümden oluşmaktadır: deney ortamı ve görev tanımı, tüm
+koşuların paylaştığı simülasyon kurulumu, arazi temsili ve karıştırma
+probleminin matematiksel formülasyonu, analitik (CPU) değerlendirme
+protokolü ve gerçek Isaac Lab/Isaac Sim eğitim protokolü. Üç karıştırma
+yöntemi de önce analitik/CPU düzeyinde, ardından gerçek GPU paralel fizik
+simülasyonu içinde aynı sabit geçiş yarıçapı ve aynı hard-truncation
+kuralı altında değerlendirilmiştir; bu tutarlılık, iki değerlendirme
+katmanı arasındaki bulguların karşılaştırılabilir olmasını sağlamaktadır.
+
+\begin{figure}[t]
+\centering
+\includegraphics[width=\linewidth]{fig01_methodology.png}
+\caption{Genel metodoloji akış şeması: arazi üretiminden (DEM + prosedürel
+ince detay), karıştırma fonksiyonu seçimine, analitik/CPU
+değerlendirmesine ve gerçek Isaac Lab/SAC eğitim-analiz hattına.}
+\label{fig:methodology}
+\end{figure}
+
+\subsection{Deney Ortamı ve Görev Tanımı}
+\label{sec:ortam}
+
+Deney ortamı, Isaac Lab doğrudan iş akışı (direct-workflow) API'si
+üzerinde tanımlanmış bir görev olan \texttt{LunarRocket-Lander-Direct-v0}
+'dır. Ajan, dört bacaklı ve iki eksenli gimbal itkili bir roketi temsil
+eder; gözlem uzayı konum, hız, yönelim, açısal hız, IMU ve altimetre
+okumaları ile hedefe göreli konumu içerir; eylem uzayı ana itki
+büyüklüğünü ve gimbal açısını kapsar. Ajan, Stable-Baselines3 (SB3) SAC
+(Soft Actor-Critic) algoritmasıyla, NVIDIA PhysX üzerinde GPU paralel
+olarak çalışan yüzlerce ortam örneğinde eş zamanlı eğitilmektedir.
+
+Arazi, tek bir prosedürel adımda değil, iki katmanlı bir temsille üretilir:
+(i) gerçek bir NASA dijital yükseklik modelinden (DEM) türetilen, rastgele
+eğim, krater ve kaya alanlarıyla zenginleştirilmiş bir küresel (global)
+makro yüzey; (ii) ajanın başlangıç ve hedef konumlarının yakınında,
+santimetre ölçekli çok frekanslı bir gürültü fonksiyonuyla üretilen
+yüksek çözünürlüklü bir yerel (local) regolit deseni. Bu iki katman, ortam
+sıfırlaması (reset) sırasında arka planda çalışan bir iş parçacığı havuzu
+tarafından önceden hazırlanmış bir ``terrain havuzu'' içinden bir yuvanın
+(slot) kopyalanmasıyla GPU'ya yüklenir; aktif bölümler (episode) hiçbir
+zaman bölüm ortasında değiştirilmez, yeni üretimler yalnızca sıfırlama
+anlarında devreye girer. Eğitim, spawn/hedef mesafesi ve komutlanabilir
+gimbal yetkisinin, kayan pencereli başarı oranına göre kademeli arttığı
+bir müfredat (curriculum) düzeni içinde yürütülmektedir.
+
+Bu iki katmanın birleştiği yerde, yerel yamanın ince detayı, küresel
+yüzeye sabit bir yarıçap içinde ``söndürülerek'' (fade) eklenir; bu
+söndürme fonksiyonunun matematiksel şekli, bu çalışmanın konusudur ve
+\cref{sec:blend}'te tanımlanmaktadır.
+
+\Cref{fig:scene-wide} ve \cref{fig:scene-closeup}, eğitilmiş bir politikanın
+gerçek Isaac Lab/Isaac Sim ortamında çalıştırılmasından alınmış, doğrudan
+simülasyondan yakalanmış görüntülerdir (offscreen render,
+\texttt{ISAACLAB\_CHECKPOINT} ile yüklenen bir kontrol noktası üzerinden;
+araç iniş yaklaşımının son evresinde, zemine yaklaşık 0,6--0,7~m
+yükseklikteyken yakalanmıştır). Bu yakalama için iki değişiklik
+yapılmıştır: (i) sahnenin varsayılan gölgesiz dome light'ı kısılmış ve
+düşük açılı, gerçek gölge düşüren yönlü bir ``güneş'' ışığı eklenmiştir,
+böylece arazi kabartması ve gölgeler görünür hâle gelmiştir; (ii) iniş
+bölgesi, 128x128 küresel yüzeyin yanı sıra 512x512 çözünürlüklü gerçek
+yüksek-detay yerel yama (bkz.\ \cref{sec:ortam}, ``yerel regolit deseni'')
+ile render edilmiştir, böylece santimetre ölçekli ince doku (toz/kum
+taneciği düzeyinde pürüzlülük) da görünür olmuştur. Aracın gerçekten dik
+durduğu varsayıma değil, simülasyonun kendi gövde-yönelim verisine
+dayanmaktadır: bu koşu boyunca gövdenin yerel yukarı ekseninin dünya $+z$
+ekseniyle hizası ($\mathrm{up}_z$) sabit biçimde $+1{,}000$ ölçülmüştür,
+yani araç devrilmiş değil, tam dikeydir. \Cref{fig:scene-wide}, dört
+bacaklı iniş aracını gerçek kraterli/kayalık ay zemini üzerinde
+göstermektedir; sırt hattı, taneli/pürüzlü yüzey dokusu, gölgeler ve
+dağınık kayalar, \cref{sec:ortam}'da tanımlanan DEM tabanlı makro
+yüzeyin ve prosedürel kaya/krater/ince-detay alanlarının çalışır
+durumdaki hâlidir. \Cref{fig:scene-closeup}, aynı karedeki iniş aracının
+yakın çekimidir; gövde, iki eksenli gimbal itki ekseninin uçları ve
+zeminin taneli dokusu birlikte görülebilmektedir. Bu görüntüler yalnızca
+ortamı görsel olarak belgelemek amacıyla sunulmuştur; belirli bir iniş
+sonucunu (başarılı/başarısız) temsil ettiği iddia edilmemektedir.
+
+\begin{figure}[t]
+\centering
+\includegraphics[width=\linewidth]{fig02_scene_wide.png}
+\caption{Eğitilmiş politikanın gerçek Isaac Sim ortamında
+çalıştırılmasından alınmış sahne görüntüsü: dört bacaklı iniş aracı,
+kraterli/kayalık ve taneli dokulu ay zemini üzerinde (yüksek-detay yerel
+yama + belgeleme amaçlı yönlü ışık; araç simülasyon verisiyle doğrulanmış
+biçimde tam dikeydir, $\mathrm{up}_z=+1{,}000$).}
+\label{fig:scene-wide}
+\end{figure}
+
+\begin{figure}[t]
+\centering
+\includegraphics[width=0.6\linewidth]{fig03_scene_closeup.png}
+\caption{Aynı sahnenin iniş aracına yakınlaştırılmış görünümü: gövde,
+gimbal itki ekseninin uçları ve zeminin santimetre ölçekli taneli dokusu
+birlikte görülebilmektedir.}
+\label{fig:scene-closeup}
+\end{figure}
+
+\subsection{Simülasyon Kurulumu}
+\label{sec:simkurulum}
+
+Bu alt bölüm, hem analitik (CPU) protokolün hem de gerçek Isaac
+Lab/Isaac Sim eğitim koşularının paylaştığı simülasyon yapılandırmasını
+tek bir yerde toplamaktadır (\cref{tab:config}). Fizik, NVIDIA PhysX
+üzerinde GPU-paralel olarak $1/120$ saniyelik sabit adımla
+(\SI{120}{\hertz}) çözülmekte; politika, \texttt{decimation}~$=2$ ile
+\SI{60}{\hertz}'de eylem üretmekte ve her bölüm \SI{20}{\second}, yani
+1200 kontrol adımı sürmektedir. Ay yerçekimi
+(\SI{1.62}{\meter\per\second\squared}), düşük restitüsyonlu regolit
+benzeri bir temas malzemesi ve 512 eş zamanlı ortam örneği tüm koşularda
+sabit tutulmuştur.
+
+Araç ve tahrik parametreleri (kütle, itki zarfı, fiziksel ve politika
+gimbal limitleri, TVC aktüatör kazançları) ile SAC hiperparametreleri, üç
+karıştırma yöntemi arasında değiştirilmemiştir. Yöntemden yönteme değişen
+tek büyüklük, \cref{sec:blend}'te tanımlanan ince-detay söndürme
+fonksiyonu ve ona bağlı parametrelerdir (\cref{tab:config}'in son grubu;
+\texttt{ISAACLAB\_TERRAIN\_BLEND\_METHOD} ortam değişkeniyle seçilir). Bu
+sabitleme, \cref{sec:bulgular}'da gözlemlenen farkların yalnızca
+karıştırma yöntemine atfedilebilmesi için gereklidir.
+
+Gerçek eğitim karşılaştırması, hesaplama bütçesi kısıtı nedeniyle tam
+ölçekli (1200 iterasyon) yapılandırmanın kısaltılmış bir versiyonuyla
+-yöntem başına üç bağımsız tohum, koşu başına yaklaşık 5,73 milyon ortam
+adımı- yürütülmüştür; bu ölçek sınırlaması \cref{sec:egitimprotokolu} ve
+\cref{sec:egitimsonuclari}'te ayrıca ele alınmaktadır.
+
+\begin{table}[t]
+\centering
+\caption{Analitik protokol ile gerçek Isaac Lab/Isaac Sim eğitim
+koşularının paylaştığı simülasyon, araç, RL eğitim ve arazi karıştırma
+parametreleri. Yalnızca son grup (karıştırma parametreleri), yöntemden
+yönteme değişir.}
+\label{tab:config}
+\footnotesize
+\begin{tabular}{@{}p{0.19\linewidth}p{0.33\linewidth}p{0.38\linewidth}@{}}
+\toprule
+\textbf{Grup} & \textbf{Parametre} & \textbf{Değer} \\
+\midrule
+\multirow{10}{*}{Fizik / simülasyon}
+ & Fizik motoru & NVIDIA PhysX 5 (GPU ardışık düzeni) \\
+ & Simülasyon adımı (dt) & $1/120$~s (\SI{120}{\hertz}) \\
+ & Kontrol frekansı (decimation = 2) & \SI{60}{\hertz} \\
+ & Bölüm süresi & \SI{20}{\second} (1200 kontrol adımı) \\
+ & Yerçekimi & $0,0,-1.62$~m/s$^2$ \\
+ & Paralel ortam sayısı & 512 \\
+ & Ortam aralığı (env\_spacing) & \SI{90}{\meter} \\
+ & Fizik kopyalama & replicate\_physics + clone\_in\_fabric (açık) \\
+ & Sürtünme (statik / dinamik) & 0.85 / 0.65 (combine: multiply) \\
+ & Restitüsyon & 0.02 \\
+\midrule
+\multirow{9}{*}{Araç ve tahrik}
+ & Araç kütlesi & 1.66~kg (1.63 gövde + gimbal bağlantıları) \\
+ & Maksimum itki & 30~N \\
+ & Maksimum komut throttle & 0.35 ($\approx$~10.5~N etkin) \\
+ & Fiziksel gimbal limiti & $\pm25^\circ$ (mekanik sert durdurucu) \\
+ & Politika gimbal zarfı & $4^\circ$--$8^\circ$ (müfredat zorluğuyla ölçeklenir) \\
+ & İtki kaldıraç kolu & 0.25~m \\
+ & TVC aktüatör (implicit) & effort 2.5, stiffness 10, damping 0.1, armature 0.002 \\
+ & Gözlem / eylem boyutu & 125 / 3 \\
+ & Başlangıç irtifası & 25~m (dik yönelim) \\
+\midrule
+\multirow{12}{*}{RL eğitimi (SB3 SAC)}
+ & Politika ağı & MLP [384, 256, 128], ELU \\
+ & Replay buffer & 1\,000\,000 \\
+ & learning\_starts & 16\,384 \\
+ & Batch boyutu & 1024 \\
+ & Öğrenme oranı & $3\times10^{-4}$ \\
+ & $\gamma$ / $\tau$ & 0.99 / 0.005 \\
+ & train\_freq / gradient\_steps & 1 / 32 \\
+ & Entropi katsayısı & otomatik (target\_entropy = $-1.5$) \\
+ & Normalizasyon & normalize\_input + normalize\_value açık, clip\_obs = 10 \\
+ & Karşılaştırma bütçesi & 350 iter $\times$ 32 $\times$ 512 $\approx$ 5.73~M ortam adımı \\
+ & Tohumlar & 42, 7, 123 (yöntem başına $n=3$, ardışık) \\
+ & Cihaz & tek GPU (cuda:0) \\
+\midrule
+\multirow{9}{*}{Karıştırma parametreleri}
+ & Geçiş yarıçapı ($R$) & 8.0~m \\
+ & Yöntem seçenekleri & smoothstep / gaussian / hybrid (ISAACLAB\_TERRAIN\_BLEND\_METHOD) \\
+ & Kalibre Gauss katsayısı ($k$) & $\ln(1000)\approx 6.9078$ \\
+ & Hibrit temas yarıçapı ($r_c$) & 1.5~m \\
+ & Hibrit switch genişliği ($w$) & 0.3~m \\
+ & İnce-detay genlik aralığı & 0.006--0.020~m \\
+ & Makro yükseklik / eğim ölçeği & 0.45~m / 0.035 \\
+ & Krater / kaya sayısı (bölüm başına) & 3 / 5 \\
+ & Terrain havuzu (boyut / yenileme) & 15 yuva / 60 atama \\
+\bottomrule
+\end{tabular}
+\end{table}
+
+\subsection{Arazi Temsili ve Karıştırma Fonksiyonları}
+\label{sec:blend}
+
+Yerel yamanın ince detay yüksekliği, küresel yüzeye üç aday söndürme
+(fade) fonksiyonundan biriyle eklenir. Her üç fonksiyon da $r$ merkezden
+uzaklık ve $R=\texttt{terrain\_detail\_radius\_m}=8{,}0$~m sabit geçiş
+yarıçapı olmak üzere $r\ge R$ için tam olarak sıfıra zorlanır (hard
+truncation); bu, üç yöntemi aynı geçiş bütçesi altında karşılaştırılabilir
+kılan temel metodolojik düzenlemedir ve üretim kodunda da bu şekilde
+uygulanmaktadır.
+
+\textbf{Smoothstep} (kompakt destek, varsayılan/mevcut yöntem): $t =
+\mathrm{clamp}(1-r/R,\,0,\,1)$ olmak üzere
+\begin{equation}
+\mathrm{fade}(r) = t^2\,(3-2t).
+\label{eq:smoothstep}
+\end{equation}
+Bu fonksiyon $r=R$'de zaten tam olarak sıfırdır; ek bir kesme adımına
+ihtiyaç duymaz ve C1 sürekliliği analitik olarak garantidir.
+
+\textbf{Gauss} (sonsuz destek, önceden kullanılan yöntem):
+\begin{equation}
+\mathrm{fade}(r) = \exp\!\left(-k\,(r/R)^2\right).
+\label{eq:gauss}
+\end{equation}
+Bu çalışmada iki $k$ değeri ayrı ayrı değerlendirilmiştir: önceden
+kullanılan (as-shipped) sabit $k=1{,}0$ ve bu çalışmada önerilen, Gauss'un
+pratik desteğinin $R$'de yaklaşık binde bir düzeyine inmesini sağlayan
+kalibre edilmiş sabit $k=\ln(1000)\approx 6{,}9078$. Üretim kodundaki
+\texttt{cfg.terrain\_gaussian\_k} alanı, varsayılan olarak kalibre
+edilmiş sabiti kullanır; üretim öncesi $k=1{,}0$ yalnızca bu çalışmanın
+analitik/CPU karşılaştırmasında, mevcut kusuru göstermek amacıyla ayrı
+bir varyant (\texttt{gaussian\_shipped}) olarak test edilmiştir. Her iki
+$k$ değeri için de fonksiyon, $r\ge R$'de dışarıdan sıfıra zorlanır.
+
+\textbf{Hibrit} (önerilen yöntem): İniş ayağı temas izi yarıçapı $r_c =
+\texttt{terrain\_hybrid\_contact\_radius\_m}=1{,}5$~m ve switch genişliği
+$w=\texttt{terrain\_hybrid\_switch\_width\_m}=0{,}3$~m olmak üzere,
+$[r_c-w/2,\,r_c+w/2]$ aralığında smoothstep ağırlıklı bir $\mathrm{switch}(r)$
+tanımlanır:
+\begin{equation}
+u = \mathrm{clamp}\!\left(\frac{\mathrm{hi}-r}{\mathrm{hi}-\mathrm{lo}},\,0,\,1\right),
+\qquad
+\mathrm{switch}(r) = u^2\,(3-2u),
+\label{eq:switch}
+\end{equation}
+burada $\mathrm{lo}=r_c-w/2$, $\mathrm{hi}=r_c+w/2$. Nihai söndürme,
+\begin{equation}
+\mathrm{fade}(r) = \mathrm{switch}(r)\cdot\mathrm{gauss}(r) +
+\left(1-\mathrm{switch}(r)\right)\cdot\mathrm{smoothstep}(r)
+\label{eq:hybrid}
+\end{equation}
+olarak tanımlanır; yani ayak temas bölgesine yakın kısımda ağırlıklı
+olarak Gauss, ötesinde ağırlıklı olarak smoothstep kullanılır ve iki
+fonksiyon arasındaki geçiş, kendisi de C1 düzgün olan bir smoothstep
+ağırlıkla yumuşatılır. $r=R$ sınırında $\mathrm{switch}(r)=0$ olduğundan,
+hibrit yöntem bu sınırda analitik olarak smoothstep ile birebir aynıdır.
+
+Bu üç yöntem, üretim kodunda \texttt{ISAACLAB\_TERRAIN\_BLEND\_METHOD}
+ortam değişkeniyle (\texttt{smoothstep} \textbar\ \texttt{gaussian}
+\textbar\ \texttt{hybrid}) seçilebilir şekilde, mevcut varsayılan
+davranışı (smoothstep) değiştirmeden entegre edilmiştir.
+
+\subsection{Analitik (CPU) Değerlendirme Protokolü}
+\label{sec:analitikprotokol}
+
+Analitik değerlendirme, Isaac Lab/torch bağımlılığı olmadan, üretim
+kodundaki formüllerin bire bir NumPy taşıması üzerinde, iki bağımsız
+izleme (track) ile yürütülmüştür: (i) mesh-track, gerçek üçgen ağı üretip
+vertex sayısı ve süre ölçen bir izleme; (ii) analytic-track, yükseklik
+alanını doğrudan sürekli bir fonksiyon olarak sorgulayan bir izleme. İki
+izlemenin birbirini doğrulaması, bulguların mesh ayrıklaştırmasına özgü
+bir yapay etki olmadığını göstermek için kullanılmıştır.
+
+Süreklilik metrikleri, sonlu farklarla hesaplanmıştır: C0 (yükseklik)
+sürekliliği, geçiş sınırının hemen iki tarafındaki noktalar arasındaki
+yükseklik farkının mutlak değeri (uzamsal epsilon = 0,05~m); C1 (eğim)
+sürekliliği, aynı noktalardaki yerel gradyanın açısal farkı (gradyan
+epsilon = 0,02~m) olarak tanımlanmıştır. Ölçümler 720 açısal örnek
+üzerinden alınmış ve hem maksimum hem RMS (kök ortalama kare) değerleri
+raporlanmıştır. İlk ölçümlerde, birleşik (küresel + yerel) yükseklik
+üzerinden yapılan ölçümün, doğal arazi eğiminin epsilon aralığındaki
+varyasyonuyla karışarak asıl dikiş sinyalini bastırdığı görülmüş; bu
+nedenle yalnızca söndürülmüş ince detay bileşenini
+($\mathrm{fade}(r)\cdot\mathrm{ince\_detay}(x,y)$) izole eden bir
+``detail-only'' ölçüm modu tanımlanmış ve bu, çalışmanın başlık
+(headline) metriği olarak benimsenmiştir; birleşik yüzey üzerindeki ölçüm
+ikincil/gerçekçi bir referans olarak korunmuştur.
+
+Bellek maliyeti, vertex başına 32 bayt ve çarpışma (collision) ağı için
+2x çarpan varsayımıyla, iki-mesh (literal, ayrı küresel ve yerel ağlar)
+ile tek-grid (baked, tek birleşik ağ) muhasebe biçimleri için ayrı ayrı
+tahmin edilmiştir. Sorgu verimi (throughput), 512 ortam ve ortam başına
+64 küresel + 24 yerel + 4 ince-detay sorgusu (toplam 92 sorgu/ortam)
+varsayımıyla, saf söndürme formülünün (fade-only, terrain örneklemesinden
+izole) mikro-saniye cinsinden maliyeti ayrıca ölçülmüştür.
+
+Ana karşılaştırma, dört yöntem varyantı (smoothstep, üretim öncesi Gauss,
+kalibre edilmiş Gauss, hibrit) için otuz bağımsız rastgele tohum
+üzerinde tekrarlanmıştır; istatistiksel anlamlılık, her tohumda
+hesaplanan $\log_{10}$ oran farkları üzerinde Wilcoxon işaretli sıra
+testiyle değerlendirilmiştir (parametrik testler yerine bu test tercih
+edilmiştir, çünkü bazı karşılaştırmalarda -örneğin hibrit ile
+smoothstep, $r=R$'de analitik olarak özdeş olduğundan- fark dağılımı
+sıfır varyansa yakınsamakta ve Cohen's $d$ gibi parametrik büyüklük
+ölçütleri yozlaşmaktadır).
+
+Bulguların sağlamlığı dört ayrı ablasyon analiziyle sınanmıştır: (i)
+temas yarıçapı ($r_c$) taraması, 1,0--4,0~m aralığında; (ii) switch
+genişliği ($w$) taraması, 0,05--2,0~m aralığında; (iii) geçiş yarıçapı
+($R$) taraması, 4--16~m aralığında, kusurun ölçek değişmezliğini test
+etmek için; (iv) grid çözünürlüğü taraması, yaklaşık 0,31--1,27~m grid
+aralığı üzerinde, log-log doğrusal regresyonla ampirik yakınsama derecesi
+(convergence order) tahmin edilerek.
+
+\subsection{Gerçek Isaac Lab/Isaac Sim Eğitim Protokolü}
+\label{sec:egitimprotokolu}
+
+Analitik değerlendirmenin ardından, üç yöntem (smoothstep, kalibre
+edilmiş Gauss, hibrit) gerçek bir Isaac Lab/Isaac Sim eğitim ortamında
+karşılaştırılmıştır. Bu, çalışmanın özgün değerinin merkezini
+oluşturur: karşılaştırma soyut bir sayısal deney olarak değil, gerçek
+kraterli/eğimli ay zemini üzerinde, GPU paralel PhysX fizik simülasyonu
+içinde çalışan bir SAC eğitim döngüsüyle gerçekleştirilmiştir.
+
+Her yöntem, \texttt{ISAACLAB\_TERRAIN\_BLEND\_METHOD} ortam değişkeniyle
+seçilerek, aynı donanımda (tek makine, tek GPU), aynı hiperparametre
+yapılandırmasıyla (\texttt{sb3\_sac\_cfg.yaml}) ve GPU/VRAM çakışmasını
+önlemek amacıyla eş zamanlı değil ardışık olarak eğitilmiştir. Her koşu
+5.734.400 ortam adımı (yaklaşık 350 iterasyon) sürmüştür; bu, hesaplama
+bütçesi kısıtı nedeniyle tam ölçekli (1200 iterasyon) yapılandırmanın
+kısaltılmış ama anlamlı bir sinyal verecek şekilde küçültülmüş bir
+versiyonudur ve bu, çalışmanın açıkça belirtilmesi gereken bir ölçek
+sınırlamasıdır.
+
+İlk ölçüm, SAC ajanının yapılandırma dosyasındaki varsayılan tohumla
+(seed~$=42$) yöntem başına tek koşu olarak yapılmıştır. Bu tek-koşu
+tasarımının Henderson ve ark.'nın \citep{henderson2018deep} uyardığı
+türden bir tuzak olduğu göz önünde bulundurularak, çalışma iki ek
+bağımsız tohumla (seed~$=7$ ve seed~$=123$) genişletilmiş ve her yöntem
+için toplam üç bağımsız koşu ($n=3$) elde edilmiştir
+-\texttt{ISAACLAB\_SEED} ortam değişkeni bu amaçla üretim koduna
+eklenmiştir. GPU paralel PhysX fizik simülasyonunun kendi içsel
+belirlenimsizliği (iş parçacığı zamanlaması, kayan nokta indirgeme
+sırası) ve terrain havuzunun arka planda çalışan CPU üretim sürecinin
+zamanlamaya bağlı olması nedeniyle, aynı tohumla bile iki koşu birbirinin
+bit eşdeğeri tekrarı değildir; dolayısıyla üç tohum, ajan başlatma
+kaynaklı varyansın yanı sıra bu sistem-düzeyi belirlenimsizliği de
+örnekler.
+
+Eğitim metrikleri (başarı oranı, zaman aşımı oranı, sert iniş oranı,
+müfredat zorluğu, entropi katsayısı, xy-ilerleme ödülü) TensorBoard
+üzerinden loglanmış ve olay dosyaları (event files)
+\texttt{tensorboard.backend.event\_processing.EventAccumulator} ile
+ayrıştırılmıştır. Her (yöntem, tohum) koşusu için nihai performans, o
+koşunun son yüzde onluk penceresindeki loglanmış noktaların ortalaması
+alınarak TEK bir özet değere indirgenmiştir; yöntemler arası
+karşılaştırmalar bu üç bağımsız özet değer üzerinde (bağımsız örneklem
+olarak) Mann-Whitney U testi ve 5000 tekrarlı bootstrap \%95 güven
+aralığı ile yapılmıştır. Bu, bir tek koşunun içindeki otokorelasyonlu
+(bağımsız olmayan) noktaları sahte-bağımsız örneklem gibi kullanmaktan
+(pseudoreplication) kaçınan, istatistiksel olarak doğru birimdir; ancak
+$n=3$ ile istatistiksel güç düşüktür ve bu husus \cref{sec:egitimsonuclari}
+ve \cref{sec:tartisma}'te açıkça vurgulanmaktadır.

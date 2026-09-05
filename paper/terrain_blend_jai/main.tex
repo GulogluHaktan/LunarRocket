@@ -1,0 +1,197 @@
+%% ===========================================================================
+%%  Ay Inisi Simulasyonlarinda Arazi Ince-Detay Gecisi
+%%  Journal of Automation and Intelligence submission build.
+%%  Elsevier CAS bundle, single-column class (cas-sc). To switch to the
+%%  double-column typeset layout, change the \documentclass line below to
+%%  cas-dc -- the section files under sections/ are class-independent.
+%% ===========================================================================
+\documentclass[a4paper,fleqn]{cas-sc}
+
+\usepackage[utf8]{inputenc}
+\usepackage[T1]{fontenc}
+\usepackage{lmodern}
+\renewcommand{\ttdefault}{lmtt}
+
+% ---- bibliography: numbered (Vancouver-style) references -----------------
+\usepackage[numbers,sort&compress]{natbib}
+
+% ---- math ---------------------------------------------------------------------
+\usepackage{mathtools}
+
+% ---- units ------------------------------------------------------------------
+\usepackage{siunitx}
+
+% ---- misc -----------------------------------------------------------------
+\usepackage{microtype}
+\emergencystretch=2em
+\usepackage{cleveref}
+\crefname{equation}{Eq.}{Eqs.}
+% Note: cleveref auto-uppercases the first letter of a \crefname base for
+% \Cref; doing that to a UTF-8 "Ş" crashes expl3's low-level string code
+% ("Improper alphabetic constant"). Give explicit \Crefname forms (built
+% from a plain ASCII "s"/"S" plus a TeX accent command) so no runtime
+% uppercasing of a UTF-8 letter is ever needed.
+\crefname{figure}{\c{s}ekil}{\c{s}ekiller}
+\Crefname{figure}{\c{S}ekil}{\c{S}ekiller}
+\crefname{table}{tablo}{tablolar}
+\Crefname{table}{Tablo}{Tablolar}
+\crefname{section}{bölüm}{bölümler}
+\Crefname{section}{Bölüm}{Bölümler}
+
+% ---- CAS class tweaks ---------------------------------------------------------
+% (a) name the target journal in the first-page footer (default: "Elsevier")
+% (b) print the "ORCID(s):" footnote line only when an ORCID is actually given
+\ExplSyntaxOn
+\cs_set:Npn \__first_footerline:
+  {
+    \group_begin:
+      \small \sffamily
+      \ifnum\theblind>0\relax\else \__short_authors: :~ \fi
+      { \rmfamily \itshape Journal~of~Automation~and~Intelligence }
+    \group_end:
+  }
+\cs_set:Npn \printorcid
+  {
+    \seq_if_empty:NF \g_stm_orcid_seq
+      {
+        \group_begin:
+          \tex_let:D \thefootnote \relax \footnotetext
+            {
+              \raggedright
+              \textsc{orcid}(s):\c_space_token
+              \seq_use:Nn \g_stm_orcid_seq { ;~ }
+            }
+        \group_end:
+      }
+  }
+\ExplSyntaxOff
+
+\graphicspath{{figures/}}
+
+\begin{document}
+\let\WriteBookmarks\relax
+\def\floatpagepagefraction{1}
+\def\textpagefraction{.001}
+
+\shorttitle{Terrain fine-detail blending in lunar-landing simulation}
+\shortauthors{H. Y. Güloğlu}
+
+\title[mode = title]{Terrain Fine-Detail Blending in Lunar-Landing
+Simulations: Comparing Smoothstep, Gaussian, and Hybrid Blending Methods
+in Isaac Lab}
+
+\author[1]{Haktan Yusuf Güloğlu}
+\cormark[1]
+\ead{haktanguloglu24@gmail.com}
+\credit{Conceptualization, Methodology, Software, Validation, Formal
+analysis, Investigation, Resources, Data curation, Writing -- original
+draft, Writing -- review \& editing, Visualization, Supervision, Project
+administration}
+
+\affiliation[1]{organization={Sakarya University, National Technology
+Workshop, Artificial Intelligence Center},
+                city={Sakarya},
+                country={Türkiye}}
+
+\cortext[1]{Corresponding author.}
+
+\begin{abstract}
+In procedurally generated multi-resolution terrain, the shape of the
+blending function joining a coarse global surface to a fine-detail local
+patch affects the quality of physically queryable contact geometry, yet
+this choice is usually a visual concern, not evaluated quantitatively for
+physics fidelity. This study compares the compact-support smoothstep
+blend used in a SAC-controlled, gimbal-thrust lunar lander in Isaac Lab
+against the infinite-support Gaussian blend inherited from a legacy
+codebase, under an equal transition-radius budget, and proposes a hybrid
+method using Gaussian blending near the landing-gear contact footprint
+and smoothstep beyond it. Across 30 seeds, analytic measurements show the
+as-shipped Gaussian produces roughly \num{3200} times worse boundary
+height continuity (C0, RMS) and \num{530} times worse slope continuity
+(C1) than smoothstep (Wilcoxon signed-rank, $p<\num{1e-8}$), a
+scale-invariant defect; a recalibrated Gaussian and the hybrid both
+restore near-machine-precision continuity, with negligible VRAM impact.
+Isaac Sim training runs (\num{5.73} million steps per method) were first
+conducted with a single seed, where the calibrated Gaussian and hybrid
+appeared to reach a markedly higher final success rate than smoothstep.
+Extending the comparison to two more seeds ($n=3$ total) found no
+statistically significant difference between methods on any metric (all
+Mann--Whitney $p\ge 0.20$); the apparent gap is largely consistent with
+ordinary seed variance. This gives a concrete demonstration of how
+misleading single-seed RL comparisons can be: the blend function has a
+robust, measurable effect on boundary continuity, but this does not
+translate into a distinguishable RL training-performance difference at
+the present scale and $n=3$.
+\end{abstract}
+
+\begin{highlights}
+\item As-shipped Gaussian terrain blending is \textasciitilde\num{3200}x
+worse in C0 continuity than smoothstep.
+\item A calibrated Gaussian and a new hybrid blend restore near
+machine-precision continuity.
+\item Single-seed Isaac Sim training seemed to favor Gaussian and hybrid
+over smoothstep.
+\item Extending to three seeds finds no significant difference among
+blends (all $p\ge 0.20$).
+\item A concrete case study on how misleading single-seed RL comparisons
+can be in practice.
+\end{highlights}
+
+% JAI Guide for Authors: maximum of 6 keywords.
+\begin{keywords}
+Lunar landing simulation \sep Reinforcement learning (Soft Actor-Critic)
+\sep Isaac Lab \sep Procedural terrain generation \sep Multi-resolution
+blending \sep Continuity analysis
+\end{keywords}
+
+\maketitle
+
+\input{sections/00_ozet}
+\input{sections/01_giris}
+\input{sections/02_ilgili_calismalar}
+\input{sections/03_yontem}
+\input{sections/04_bulgular}
+\input{sections/05_tartisma}
+\input{sections/06_sonuc}
+
+\section*{Teşekkür}
+Bu çalışma, harici bir fon veya kurumsal destek almaksızın, yazarın kendi
+hesaplama kaynakları (yerel NVIDIA GPU iş istasyonu) kullanılarak
+gerçekleştirilmiştir. Yazar, Isaac Lab ve Isaac Sim'i açık kaynaklı olarak
+geliştiren NVIDIA ekibine ve deney altyapısında kullanılan açık kaynaklı
+yazılım kütüphanelerine (Stable-Baselines3, PyTorch, NumPy, SciPy,
+TensorBoard) teşekkür eder.
+
+\section*{Çıkar Çatışması Beyanı}
+Yazar, bu çalışmayla ilgili bilinen herhangi bir mali çıkar çatışması veya
+kişisel ilişki bulunmadığını beyan eder.
+
+\section*{Veri ve Kod Erişilebilirliği}
+Bu çalışmada kullanılan analitik değerlendirme kodu (üç karıştırma
+fonksiyonunun NumPy taşıması, süreklilik/maliyet metrikleri, ablasyon
+betikleri), üretim ortamı kodu (Isaac Lab görev tanımı ve üç yöntemin
+ISAACLAB\_TERRAIN\_BLEND\_METHOD ile seçilebilir entegrasyonu) ve ham
+deney çıktıları (otuz tohumlu süreklilik ölçümleri, dört ablasyon
+taraması, gerçek eğitim TensorBoard günlükleri) yazarın proje deposunda
+saklanmaktadır ve makul talep üzerine yazardan temin edilebilir. Kodun,
+makale değerlendirme sürecinde kamuya açık bir depoya taşınması
+planlanmaktadır.
+
+\printcredits
+
+\bibliographystyle{elsarticle-num}
+\bibliography{refs}
+
+\bio{photo-haktan}
+Haktan Yusuf Güloğlu, Profilo Mesleki ve Teknik Anadolu Lisesi'nden sınıf
+birincisi olarak mezun olmuş olup hâlen Sakarya Üniversitesi Bilgisayar
+Mühendisliği bölümünde lisans öğrencisidir. Sakarya Üniversitesi Millî
+Teknoloji Atölyesi Yapay Zekâ Merkezi'nde öğrenci araştırmacı olarak
+çalışmaktadır; araştırma ilgi alanları pekiştirmeli öğrenme, prosedürel
+simülasyon ortamları ve fizik motorlarında temas geometrisinin sayısal
+doğruluğudur. Bu çalışmada kavramsallaştırmadan deney tasarımına, yazılım
+uygulamasından istatistiksel analize ve yazıma kadar tüm aşamaları tek
+yazar olarak yürütmüştür.
+\endbio
+
+\end{document}

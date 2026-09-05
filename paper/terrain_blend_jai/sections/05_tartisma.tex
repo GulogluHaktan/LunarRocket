@@ -1,0 +1,106 @@
+\section{Tartışma}
+\label{sec:tartisma}
+
+Bulgular, öncelikle AS1'e net bir yanıt vermektedir: üretim öncesi Gauss
+karıştırmasının sonlu yarıçapta kesildiğinde bıraktığı dikiş, kozmetik
+veya ihmal edilebilir bir kusur değil, smoothstep'e göre üç kat büyüklük
+mertebesinde (yaklaşık 3200 kat C0, 530 kat C1) ölçülebilir ve
+istatistiksel olarak son derece anlamlı bir yapısal kusurdur. Bu kusurun
+kaynağı bir kodlama hatası değil, radyal baz fonksiyonlarının elli yılı
+aşkın süredir bilinen bir özelliğidir: Hardy'nin \citep{hardy1971multiquadric}
+tanımladığı Gauss tipi radyal fonksiyonlar sonsuz desteklidir ve hiçbir
+sonlu yarıçapta tam sıfıra inmez; Wendland \citep{wendland1995piecewise}
+tam olarak bu problemin çözümü olarak kompakt destekli, minimal dereceli
+pozitif tanımlı radyal fonksiyonları önermiştir. Bu çalışmanın katkısı,
+bu elli yıllık matematiksel bilgiyi, somut bir mühendislik ortamında
+(fiziksel olarak sorgulanabilir bir ay zemini yükseklik alanı) nicel
+olarak göstermek ve bunun bir RL eğitimine yansıyıp yansımadığını test
+etmektir. Bu analitik bulgu, aşağıda tartışılan RL sonuçlarının aksine,
+30 tohumla doğrulanmış ve tek-koşu belirsizliğine tabi değildir;
+dolayısıyla çalışmanın en sağlam, en az tartışmalı bulgusu budur.
+
+AS2'ye yanıt olarak, önerilen hibrit yöntem, temas bölgesinde Gauss'un
+yumuşak ``çan'' profilini, ötesinde smoothstep'in kompakt desteğini
+korurken, kendi iç geçişinde (switch) yeni bir dikiş yaratmamaktadır; bu,
+Ohtake ve ark.'nın \citep{ohtake2003multiscale} tanımladığı
+partition-of-unity çerçevesiyle tutarlı, beklenen bir sonuçtur: iki C1
+düzgün fonksiyonun C1 düzgün bir ağırlıkla dışbükey birleşimi yine C1
+düzgündür. Bu avantajın bedeli, saf söndürme formülünün hesaplanmasında
+smoothstep'e göre yaklaşık 4,3 kat daha yüksek bir mikro-saniye
+maliyetidir (her iki dalın da hesaplanması nedeniyle). Bu formül-düzeyi
+maliyet, gerçek eğitimin duvar-saatine yalnızca kısmen ve tutarsız
+biçimde yansımaktadır: ilk (seed=42) ölçümde Gauss ve hibrit sırasıyla
+\%56 ve \%35 daha yavaştı, ancak üç tohumun ortalamasına bakıldığında bu
+fark \%20 ve \%12,5'e inmekte ve standart sapma (ortalamanın \%20--30'u)
+tek bir koşunun ne kadar sapabildiğini göstermektedir
+(\cref{sec:egitimsonuclari}). Bu, gerçek duvar-saati farkının büyük
+ölçüde koşu-koşu sistem değişkenliğinden (arka plan yükü, termal durum,
+terrain havuzu zamanlaması) kaynaklandığını, saf formül maliyetinin
+yalnızca küçük ve tutarlı bir katkı sağladığını düşündürmektedir; bu,
+aşırı yorumlanmaması gereken ama tek-koşu ölçümlerin maliyet
+karşılaştırmalarında da yanıltıcı olabileceğini gösteren ayrı bir
+gözlemdir.
+
+AS3'e yanıt, çoklu tohum sonrasında önemli ölçüde değişmiştir ve bu
+değişimin kendisi çalışmanın en öğretici bulgularından biridir. İlk (tek
+tohumlu, seed=42) ölçümde Gauss ve hibrit, smoothstep'e göre yaklaşık
+8--12 yüzde puanı daha yüksek nihai başarı oranına ulaşmış görünüyordu
+ve bu ilk taslakta ``geçiş bandı ağırlık profili farkı'' gibi bir
+mekanizmaya bağlanmıştı. İki ek bağımsız tohumla (seed=7, seed=123)
+genişletilen ölçümde ise (\cref{sec:egitimsonuclari}) yöntemler arası
+fark küçülmüş (Gauss-smoothstep farkı \%11'den \%4,7'ye), hibrit-smoothstep
+farkı işaret değiştirmiş, ve üç metrikte de (başarı oranı, zaman aşımı
+oranı, sert iniş oranı) hiçbir ikili karşılaştırma istatistiksel olarak
+anlamlı çıkmamıştır (tüm $p\ge 0{,}20$). Gerçek eğitimde kullanılan
+Gauss varyantının (kalibre edilmiş, $k=\ln(1000)$) analitik sınır
+sürekliliğinin zaten smoothstep'e neredeyse eşit olduğu
+(\cref{tab:continuity}) hatırlanırsa, bu sonuç aslında beklenen bir
+tutarlılık gösteriyor: sınır sürekliliğinde ölçülebilir bir fark yoksa,
+RL eğitim performansında da güçlü bir fark bulunmaması sürpriz değildir.
+İlk ölçümdeki görünür fark, büyük olasılıkla GPU paralel PhysX
+simülasyonunun ve terrain havuzunun arka plan CPU üretim sürecinin kendi
+içsel belirlenimsizliğinden kaynaklanan sıradan koşu-koşu varyansıydı
+-tam olarak Henderson ve ark.'nın \citep{henderson2018deep} uyardığı
+pseudoreplication tuzağı. Bu çalışma, kendi başlangıç bulgusunu bu
+şekilde çürütmüş olması nedeniyle, tek-koşu RL karşılaştırmalarının ne
+kadar yanıltıcı olabileceğine dair kendi içinde bir vaka çalışması
+sunmaktadır: $n=1$'den $n=3$'e çıkmak, ``anlamlı'' görünen bir bulguyu
+istatistiksel olarak ayırt edilemez hâle getirmeye yetmiştir. Bununla
+birlikte $n=3$ hâlâ düşük güçlüdür ve mevcut veri, küçük bir gerçek
+etkinin varlığını da (özellikle Gauss'un tutarlı biçimde en yüksek
+ortalamaya sahip olması) dışlayamaz; kesin bir sonuca varmak için daha
+fazla tohum gerekir (\cref{sec:sonuc}).
+
+Bu çalışmanın kapsamı, karıştırma fonksiyonunun etkisini tek bir
+değişken olarak izole edebilmek amacıyla bilinçli olarak dar tutulmuş;
+üç yöntem yalnızca birbiriyle, üretim ortamının geri kalanı (fizik
+motoru, ödül fonksiyonu, ajan mimarisi, müfredat düzeni) sabit tutularak
+karşılaştırılmıştır. Literatürdeki başka bir terrain-blending yönteminin
+-örneğin başka bir simülatörde uygulanmış bir yöntemin- doğrudan bu
+ortama taşınıp dış bir kıyas noktası (external benchmark) olarak
+kullanılması bilinçli olarak tercih edilmemiştir; böyle bir kıyas,
+karıştırma fonksiyonunun etkisini o simülatörün fizik motoru,
+gözlem/ödül tasarımı ve ajan mimarisindeki sayısız diğer farktan
+ayrıştırmayı imkânsız kılacaktır. Bunun bedeli, bulguların bu spesifik
+ortamın (Isaac Lab/PhysX, SAC, bu görev tanımı) ötesine ne ölçüde
+genellendiğinin -dış geçerliliğin- bu çalışmada test edilmemiş
+olmasıdır; bu husus \cref{sec:sonuc}'da somut bir gelecek çalışma yönü
+olarak ele alınmaktadır.
+
+Bu çalışmanın en önemli sınırlaması, $n=3$ ile hâlâ düşük istatistiksel
+güce sahip olmasıdır: mevcut veriyle Mann-Whitney testinin
+üretebileceği en küçük $p$ değeri zaten sınırlıdır (3'e 3
+karşılaştırmada asgari $p\approx 0{,}10$ civarı), dolayısıyla ``anlamlı
+fark yok'' bulgusu yöntemlerin gerçekten eşdeğer olduğunu kanıtlamaz
+-yalnızca ilk ölçümdeki büyük görünen farkın güvenilir biçimde
+doğrulanamadığını gösterir. İkinci sınırlama, eğitim ölçeğinin (5,73
+milyon adım, yaklaşık 350 iterasyon) hesaplama bütçesi nedeniyle tam
+ölçekli yapılandırmanın (1200 iterasyon) altında kalmasıdır; hiçbir koşu
+tam yakınsamaya ulaşmamış olabilir, bu da gözlenen platoların
+nihai/asimptotik performans farkını değil, ara-dönem performans farkını
+yansıtıyor olabileceği anlamına gelir. Üçüncü sınırlama, analitik/CPU
+çalışmasının yalnızca söndürme formülünün kendisini izole etmesi, gerçek
+eğitimdeki duvar-saati farkının kaynağını (terrain üretimi, fizik
+adımlama, sistem değişkenliği) tam olarak ayrıştırmamış olmasıdır -üç-
+tohumluk veri bu farkın küçüldüğünü gösterse de kaynağını kesin olarak
+belirlemez.

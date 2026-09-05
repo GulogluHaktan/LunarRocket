@@ -1,0 +1,122 @@
+\section{Giriş}
+\label{sec:giris}
+
+Otonom ay inişi, güç inişi (powered descent) evresinde gerçek zamanlı
+olarak kraterli, kayalık ve eğimli bir arazi üzerinde hassas
+konumlandırma ve güvenli temas gerektiren, doğrudan operasyonel sonuçları
+olan bir kontrol problemidir. Son yıllarda GPU paralel fizik motorları
+(NVIDIA PhysX) ve buna dayalı simülasyon çerçeveleri, binlerce ortamı eş
+zamanlı çalıştırarak derin pekiştirmeli öğrenmeyle (RL) karmaşık temas
+zengini görevlerin pratik sürelerde öğrenilmesini mümkün kılmıştır
+\citep{mittal2023orbit,nvidia2025isaaclab,rudin2022walking}. Bu
+çalışmanın temelini oluşturan proje de bu sınıfa girer: dört bacaklı, iki
+eksenli gimbal itkili bir roketin, Soft Actor-Critic (SAC) algoritmasıyla,
+gerçek dijital yükseklik modeli (DEM) tabanlı bir makro yüzey üzerine
+bindirilmiş kraterler, kayalar ve santimetre ölçekli regolit dokusuyla
+zenginleştirilmiş prosedürel bir ay zemininde inişi öğrendiği bir Isaac
+Lab doğrudan iş akışı (direct-workflow) görevidir.
+
+Bu tarz prosedürel çok çözünürlüklü arazilerde, hesaplama ve bellek
+bütçesini sınırlı tutmak için tipik olarak iki katman kullanılır: geniş
+alanı kapsayan düşük çözünürlüklü bir küresel (global) yüzey ve ajanın ya
+da hedefin yakınında yalnızca gerekli bölgede oluşturulan yüksek
+çözünürlüklü bir yerel (local) yama. Bu iki katmanın dikişsiz birleşmesi,
+bilgisayar grafikleri literatüründe yirmi beş yılı aşkın süredir
+çalışılan klasik bir problemdir (geometry clipmaps için
+\citep{losasso2004geometry}; ROAM için \citep{duchaineau1997roaming};
+geomipmapping için \citep{deboer2000geomipmapping}). Ancak bu literatür
+neredeyse tamamen görsel işleme (rendering) kalitesine odaklanır;
+birleşme sınırındaki bir süreksizliğin, ayağın zeminle temasını, yükseklik
+sensörü okumalarını veya bir RL ajanının proprioseptif gözleminin
+gürültü karakterini nasıl etkilediği nicel olarak nadiren ele alınır.
+
+Bu problem, incelenen sistemde iki farklı ve birbiriyle tutarsız çözümle
+karşımıza çıkmaktadır: eğitim ortamı katmanlar arasında geçişi kompakt
+destekli bir kübik smoothstep fonksiyonuyla sağlarken, önceden kullanılan
+mesh tabanlı bir uygulama sonsuz destekli bir Gauss çanı kullanmaktadır.
+Bu iki fonksiyon, matematiksel olarak temelden farklı bir özelliğe
+sahiptir: smoothstep sonlu bir yarıçapta tam olarak sıfıra iner (kompakt
+destek), oysa standart Gauss çanı hiçbir sonlu yarıçapta tam sıfıra
+inmez (sonsuz destek; \citep{hardy1971multiquadric}) ve bir mühendislik
+uygulamasında kullanılabilmesi için mutlaka bir noktada kesilmesi
+(truncation) gerekir; bu kesme işlemi, kesim noktasında yeni ve
+ölçülebilir bir dikiş (seam) yaratma riski taşır. Bu iki yöntemi adil
+biçimde karşılaştırmak, ikisini de aynı geçiş yarıçapında sıfıra
+zorlamayı (hard truncation) ve aynı geçiş bütçesi altında ölçmeyi
+gerektirir; bu karşılaştırma biçimi, yapılan literatür taramasında
+terrain-randomization çalışmalarının hiçbirinde doğrudan ele alınmamıştır
+(bkz. \cref{sec:ilgili}).
+
+Bu gözlemlerden hareketle çalışma üç araştırma sorusuna yanıt aramaktadır:
+
+\begin{itemize}
+\item \textbf{AS1:} Kompakt destekli (smoothstep) ve sonsuz destekli
+(Gauss) karıştırma fonksiyonları, aynı geçiş yarıçapı bütçesi altında
+adil biçimde karşılaştırıldığında, sınır sürekliliği (C0/C1) açısından
+nicel olarak ne kadar farklıdır ve bu fark hesaplama/bellek maliyetiyle
+nasıl bir denge (trade-off) oluşturur?
+\item \textbf{AS2:} İniş ayağı temas bölgesinde Gauss, ötesinde
+smoothstep kullanan bir hibrit karıştırma yöntemi, her iki yöntemin
+süreklilik avantajlarını makul bir hesaplama maliyeti artışıyla
+birleştirebilir mi?
+\item \textbf{AS3:} Bu üç karıştırma yönteminin sürekliliğindeki farklar,
+gerçek bir Isaac Sim/Isaac Lab SAC eğitiminde ölçülebilir bir öğrenme
+performansı farkına yansır mı?
+\end{itemize}
+
+Bu doğrultuda çalışmanın amacı üç yönlüdür: (i) mevcut smoothstep
+yöntemini ve önceden kullanılan Gauss yöntemini aynı mimaride, aynı
+geçiş bütçesi altında nicel olarak karşılaştırmak; (ii) iki yöntemin
+avantajlarını birleştiren bir hibrit yöntem önerip doğrulamak; (iii) bu
+üç yöntemi yalnızca analitik/CPU düzeyinde değil, gerçek bir Isaac
+Sim/Isaac Lab GPU paralel fizik simülasyonu içinde, gerçek bir SAC
+eğitimiyle karşılaştırarak, karıştırma fonksiyonu seçiminin öğrenme
+performansına yansıyıp yansımadığını göstermektir. Bu son nokta,
+çalışmanın özgün değerinin merkezindedir: karşılaştırma soyut bir sayısal
+deney olarak değil, gerçek ay zemini üzerinde, gerçek bir Isaac Sim
+eğitim döngüsü içinde gerçekleştirilmiştir.
+
+Bu çalışmanın temel katkıları şunlardır:
+
+\begin{itemize}
+\item Var olan smoothstep ve önceden kullanılan Gauss karıştırma
+yöntemleri, sonlu geçiş yarıçapında kesilerek (hard truncation) aynı
+geçiş bütçesi altında ilk kez adil biçimde karşılaştırılmış; kesilmemiş
+Gauss'un görünürde iyi durduğu ama gerçekte sonlu yarıçapta kesildiğinde
+ortaya çıkan gizli bir dikiş kusuru taşıdığı gösterilmiştir.
+\item Temas bölgesinde Gauss, ötesinde smoothstep ağırlıklı bir switch
+kullanan yeni bir hibrit karıştırma yöntemi önerilmiş ve bu yöntemin
+makine hassasiyetinde süreklilik sağladığı, kendi iç geçişinde yeni bir
+dikiş yaratmadığı gösterilmiştir.
+\item Otuz tohum ve dört yöntem varyantı (smoothstep, üretim öncesi
+Gauss, kalibre edilmiş Gauss, hibrit) üzerinde istatistiksel olarak
+doğrulanmış (Wilcoxon işaretli sıra testi) bir süreklilik, maliyet ve
+VRAM karşılaştırması yapılmış; dört ayrı ablasyon analiziyle (temas
+yarıçapı, switch genişliği, geçiş yarıçapı, grid çözünürlüğü)
+bulguların sağlamlığı sınanmıştır.
+\item Üç yöntem, gerçek bir Isaac Lab/Isaac Sim PhysX ortamında, GPU
+paralel SAC eğitimiyle karşılaştırılmıştır; bu, terrain-randomization
+literatüründeki çalışmaların aksine karıştırma fonksiyonu seçimini
+doğrudan bir eğitim tasarımı değişkeni olarak ele alan ilk denemedir.
+\item Bu gerçek eğitim karşılaştırması yöntem başına tek tohumla değil
+üç bağımsız tohumla ($n=3$) yapılmış; ilk tek-tohumlu ölçümde görünen
+büyük performans farkının çoklu tohumla istatistiksel olarak
+doğrulanamadığı gösterilerek, tek-koşu RL karşılaştırmalarının
+güvenilirliği konusunda somut, kendi verisine dayanan bir uyarı örneği
+sunulmuştur.
+\item Üç yöntem de üretim koduna, mevcut davranışı bozmayan (geriye
+dönük uyumlu) ve bir ortam değişkeniyle
+(ISAACLAB\_TERRAIN\_BLEND\_METHOD) seçilebilir şekilde entegre
+edilmiştir.
+\end{itemize}
+
+Bu makalenin geri kalanı şu şekilde yapılandırılmıştır: \cref{sec:ilgili},
+çalışmanın konumlandığı literatürü beş tematik küme altında
+incelemektedir. \cref{sec:yontem}, deney ortamını ve tüm koşuların
+paylaştığı simülasyon kurulumunu, karıştırma fonksiyonlarının matematiksel
+tanımını, analitik değerlendirme protokolünü ve gerçek Isaac Sim eğitim
+protokolünü ayrıntılandırmaktadır. \cref{sec:bulgular}, süreklilik,
+maliyet, VRAM, ablasyon ve gerçek eğitim sonuçlarını sunmaktadır.
+\cref{sec:tartisma}, bulguları literatürle ilişkilendirerek tartışmakta ve
+sınırlamaları ele almaktadır. \cref{sec:sonuc}, çalışmayı özetlemekte ve
+somut gelecek çalışma önerileriyle sonlanmaktadır.

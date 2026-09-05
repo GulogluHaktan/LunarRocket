@@ -1,0 +1,61 @@
+\section{Sonuç}
+\label{sec:sonuc}
+
+Bu çalışma, Isaac Lab tabanlı bir ay iniş ortamında kaba çözünürlüklü
+küresel arazi ile ince detaylı yerel yamanın birleştiği sınırda
+kullanılan karıştırma fonksiyonunun şeklini, hem analitik/CPU düzeyinde
+hem de gerçek bir Isaac Sim SAC eğitiminde sistematik olarak
+incelemiştir. Otuz tohum üzerindeki analitik ölçümler, önceden kullanılan
+üretim öncesi Gauss karıştırmasının sonlu yarıçapta kesildiğinde
+smoothstep'e göre üç kat büyüklük mertebesinde daha kötü sınır
+sürekliliği ürettiğini ve bu kusurun ölçek değişmez, yapısal bir özellik
+olduğunu istatistiksel olarak anlamlı biçimde göstermiştir. Önerilen
+hibrit yöntem ve kalibre edilmiş bir Gauss varyantı, bu kusuru makine
+hassasiyetine yakın düzeyde gidermiştir -bu, çalışmanın en sağlam ve en
+az tartışmalı bulgusudur.
+
+Gerçek Isaac Sim eğitim karşılaştırması, yöntem başına tek tohumla
+başlamış ve ilk ölçümde Gauss ile hibrit'in smoothstep'e göre belirgin
+biçimde daha yüksek başarı oranına ulaştığını göstermiştir. Bu bulgunun
+güvenilirliğini sınamak için çalışma iki ek bağımsız tohumla (toplam
+$n=3$) genişletilmiş ve yöntemler arasında hiçbir metrikte istatistiksel
+olarak anlamlı bir fark bulunamamıştır. Bu, çalışmanın ikinci önemli
+katkısıdır: tek-koşu RL karşılaştırmalarının ne kadar yanıltıcı
+olabileceğine dair kendi verisiyle somut bir örnek sunmakta ve Henderson
+ve ark.'nın \citep{henderson2018deep} uyarısını bu spesifik ortamda
+ampirik olarak doğrulamaktadır. Analitik sonuçlarla birlikte
+değerlendirildiğinde bu, karıştırma fonksiyonu seçiminin sınır
+sürekliliği açısından ölçülebilir ve sağlam bir etkiye sahip olduğunu,
+ancak bunun nihai RL eğitim performansına -en azından bu ölçekte ve
+$n=3$ ile ayırt edilebilir biçimde- yansımadığını göstermektedir.
+
+Çalışmanın temel katkısı, karıştırma fonksiyonu seçiminin salt bir
+görsel/rendering tercihi olmadığını, gerçek bir Isaac Sim/Isaac Lab
+ortamında hem analitik hem de RL-eğitimi düzeyinde nicel olarak sınayan
+bir metodoloji sunmasıdır; bu metodoloji, olumlu bir sonuç kadar
+``anlamlı fark yok'' sonucunu da güvenilir biçimde raporlayabilmiştir.
+Üç yöntem de üretim koduna geriye dönük uyumlu, seçilebilir bir
+yapılandırma olarak entegre edilmiş olup, bu bulgular doğrudan
+uygulanabilir niteliktedir: mevcut veriyle, üç yöntem arasında RL eğitim
+performansı açısından seçim yapmak için istatistiksel bir gerekçe
+yoktur; seçim, sınır sürekliliği (analitik olarak Gauss ve hibrit lehine)
+veya hesaplama maliyeti (smoothstep lehine) gibi diğer ölçütlere
+dayandırılabilir.
+
+Gelecek çalışma için üç somut yön önerilmektedir. Birincisi, $n=3$'ün
+hâlâ düşük istatistiksel güce sahip olması nedeniyle, gerçek eğitim
+karşılaştırmasının en az beş-on bağımsız tohumla daha genişletilerek,
+gözlenen küçük ortalama farkların (özellikle Gauss'un tutarlı biçimde en
+yüksek ortalamaya sahip olması) gerçek bir etki mi yoksa kalıntı gürültü
+mü olduğunun kesin biçimde belirlenmesidir. İkincisi, eğitim ölçeğinin
+tam yapılandırmaya (1200 iterasyon) çıkarılarak, gözlenen platoların
+ara-dönem değil nihai/asimptotik bir performans farkını yansıtıp
+yansıtmadığının teyit edilmesidir. Üçüncüsü, bu çalışmanın bilinçli
+olarak dar tuttuğu kapsamın (bkz.\ \cref{sec:tartisma}) ötesine
+geçilerek, bulguların dış geçerliliğinin (external validity)
+sınanmasıdır: aynı üç karıştırma yönteminin başka bir fizik motoru,
+başka bir ödül/gözlem tasarımı veya başka bir temas zengini görev
+(ör.\ dört ayaklı yürüyüş, insansı robot ayakta durma) üzerinde
+tekrarlanması, buradaki bulguların karıştırma fonksiyonuna mı yoksa bu
+spesifik ortamın diğer tasarım seçimlerine mi bağlı olduğunu
+ayrıştıracaktır.

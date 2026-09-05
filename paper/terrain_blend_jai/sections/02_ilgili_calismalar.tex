@@ -1,0 +1,94 @@
+\section{İlgili Çalışmalar}
+\label{sec:ilgili}
+
+Bu bölüm, çalışmanın konumlandığı literatürü beş tematik küme altında
+incelemektedir. Tarama, hedefli (targeted/scoping) bir kapsam taramasıdır;
+PRISMA uyumlu sistematik bir tarama değildir ve her kümede alanın en çok
+atıf alan/temel referansları önceliklendirilmiştir.
+
+Küme 1, prosedürel arazide çoklu çözünürlük karıştırma ve LOD (detay
+seviyesi) geçişini ele alır. Geometry clipmaps
+\citep{losasso2004geometry}, ROAM \citep{duchaineau1997roaming} ve
+geomipmapping \citep{deboer2000geomipmapping}, tam olarak bu çalışmanın
+iki mesh (küresel + yerel yama) çerçevesinin ait olduğu geleneksel
+bilgisayar grafikleri hattını oluşturur; üçü de düşük ve yüksek
+çözünürlüklü ağların birleştiği sınırda çatlak/dikiş oluşmasını merkezi
+bir mühendislik problemi olarak ele alır. Bu çalışmanın bulgusu, üretim
+öncesi Gauss'un sonlu yarıçapta kesildiğinde gerçek bir dikiş bırakması,
+bu literatürün yirmi beş yılı aşkın süredir çözmeye çalıştığı aynı sınıf
+problemin somut ve ölçülmüş bir örneğidir; smoothstep'in kompakt desteği
+ise ROAM ve geoclipmap'in kullandığı sınırda tam sıfıra inen ağırlık
+fonksiyonu ilkesiyle örtüşür.
+
+Küme 2, kompakt destekli ve sonsuz destekli karıştırma fonksiyonlarının
+süreklilik özelliklerini ele alır. Hardy'nin \citep{hardy1971multiquadric}
+topografya için önerdiği multiquadric/Gauss tipi radyal baz fonksiyonu, bu
+çalışmadaki üretim öncesi Gauss'un ait olduğu aile gibi sonsuz destekli
+olup hiçbir sonlu yarıçapta tam sıfıra inmez; bu, ölçülen kalıntı
+davranışıyla (yaklaşık $\exp(-1)\approx\SI{37}{\percent}$) örtüşür.
+Wendland \citep{wendland1995piecewise} ise bunun çözümünü formalize eder:
+verilen bir düzgünlük derecesi için kompakt destekli, minimal dereceli
+pozitif tanımlı radyal fonksiyonlar; smoothstep (kübik Hermite,
+\citep{ebert2002texturing}), bu ailenin bir boyutlu, düşük dereceli özel
+bir örneğidir. Ohtake ve ark.\ \citep{ohtake2003multiscale}, bu çalışmanın
+hibrit yönteminin izlediği stratejiyi tanımlar: kompakt destekli baz
+fonksiyonlarla çok ölçekli bir hiyerarşi kurup farklı ölçeklerde farklı
+karıştırma davranışı elde etmek.
+
+Küme 3, gezegen/ay inişi simülasyonlarında arazi modelleme ve temas
+dinamiğini ele alır. ALHAT programının hedefi
+\citep{johnson2008overview,nasajpl_alhat}, yani yüz metre içinde hassas
+iniş ve LiDAR tabanlı arazi göreli navigasyon, ve LOLA/SELENE tabanlı
+dijital yükseklik modellerinin sunduğu doğruluk düzeyi
+\citep{barker2016lunar}, gerçek ay inişi mühendisliğinde arazi
+doğruluğunun kozmetik değil doğrudan operasyonel bir gereksinim olduğunu
+göstermektedir. Bu, çalışmanın ``neden dikiş/süreklilik önemli''
+motivasyonunu güçlendirmektedir: ayak temas bölgesindeki bir süreksizlik,
+gerçek ALHAT sınıfı sistemlerde tehlike tespiti ve iniş alanı seçimi
+kararlarını etkileyebilecek bir hata sınıfına karşılık gelir. Bu
+motivasyon, güncel bir uçuş verisiyle de doğrulanmıştır: JAXA'nın SLIM
+görevinin (Ocak 2024) görüş-tabanlı navigasyon ve engel tespiti sonuçları
+\citep{ishida2025vision}, inişten \SI{50}{\meter} önce yapılan gerçek
+zamanlı engel/arazi tespitinin metre mertebesinde iniş hassasiyeti
+sağladığını göstermiş; bu, arazi temsilindeki hataların yalnızca
+simülasyonda değil, gerçek uçuşta da doğrudan iniş güvenliğine
+yansıdığını somutlaştırmaktadır.
+
+Küme 4, fizik tabanlı RL ortamlarında prosedürel arazi randomizasyonunu
+ele alır. Rudin ve ark.\ \citep{rudin2022walking}, IsaacGym üzerinde bu
+çalışmadaki terrain havuzuna benzer bir zorluk tabanlı
+terrain-curriculum kullanır; bu, çalışmanın curriculum ve terrain-havuzu
+tasarımının izole bir örnek olmadığını, alanın yerleşik bir pratiği
+olduğunu göstermektedir. Mittal ve ark.\ \citep{mittal2023orbit} (Orbit)
+ve NVIDIA \citep{nvidia2025isaaclab} (Isaac Lab), doğrudan bu çalışmanın
+kullandığı platformun mimari temelini tanımlarken, Tobin ve ark.\
+\citep{tobin2017domain} prosedürel randomizasyonun sim-to-real
+transferindeki genel motivasyonu sağlar. Ancak bu kaynakların hiçbiri,
+arazi randomizasyonu içindeki çoklu çözünürlük karıştırma fonksiyonunun
+kendisini (smoothstep, Gauss veya hibrit) bir tasarım değişkeni olarak
+ele almamaktadır; hepsi terrain çeşitliliğine odaklanmakta, blend
+şeklinin süreklilik ve öğrenme maliyetine odaklanmamaktadır. Bu çalışma
+tam olarak bu boşlukta konumlanmaktadır.
+
+Küme 5, hibrit/bölgesel karıştırma fonksiyonu birleştirmesini (partition
+of unity) ele alır. Ohtake ve ark.\ \citep{ohtake2003multiscale}, burada
+da merkezi kaynaktır: kompakt destekli baz fonksiyonların çok ölçekli,
+partition-of-unity tarzı birleştirilmesi, bu çalışmanın hibrit yönteminin
+(temas bölgesinde bir fonksiyon, ötesinde başka bir fonksiyon, aralarında
+yumuşak bir switch) genel matematiksel çerçevesidir. Bu çerçeve altında,
+hibrit switch'in makine hassasiyetinde yeni bir dikiş yaratmaması
+beklenen ve literatürle tutarlı bir sonuçtur: iki C1 düzgün fonksiyonun
+C1 düzgün bir ağırlıkla dışbükey birleşimi yine C1 düzgündür.
+
+Özetle, Küme 1 problem sınıfını (çoklu çözünürlük geçişinde
+dikiş/süreklilik) sağlarken bu literatür ağırlıklı olarak görsel kaliteye
+odaklanmaktadır; bu çalışma aynı problemi fiziksel olarak sorgulanabilir
+bir yükseklik alanında (ayak teması) sayısal olarak ölçmektedir. Küme 2,
+ampirik bulgunun neden doğru olduğunu elli yılı aşkın bir matematiksel
+sonuçla temellendirmektedir; bu bir kodlama hatası değil, radyal baz
+fonksiyonlarının bilinen bir yapısal özelliğidir. Küme 3, ``neden
+önemli'' sorusuna gerçek dünya mühendislik gerekçesi sağlamaktadır. Küme
+4, bu çalışmanın deney platformunun literatürdeki yerini ve doldurduğu
+boşluğu netleştirmektedir. Küme 5, önerilen hibrit yöntemi izole bir
+mühendislik hilesi olmaktan çıkarıp yerleşik bir matematiksel çerçeveye
+oturtmaktadır.
