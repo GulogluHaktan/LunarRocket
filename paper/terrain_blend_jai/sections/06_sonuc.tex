@@ -1,61 +1,60 @@
-\section{Sonuç}
+\section{Conclusion}
 \label{sec:sonuc}
 
-Bu çalışma, Isaac Lab tabanlı bir ay iniş ortamında kaba çözünürlüklü
-küresel arazi ile ince detaylı yerel yamanın birleştiği sınırda
-kullanılan karıştırma fonksiyonunun şeklini, hem analitik/CPU düzeyinde
-hem de gerçek bir Isaac Sim SAC eğitiminde sistematik olarak
-incelemiştir. Otuz tohum üzerindeki analitik ölçümler, önceden kullanılan
-üretim öncesi Gauss karıştırmasının sonlu yarıçapta kesildiğinde
-smoothstep'e göre üç kat büyüklük mertebesinde daha kötü sınır
-sürekliliği ürettiğini ve bu kusurun ölçek değişmez, yapısal bir özellik
-olduğunu istatistiksel olarak anlamlı biçimde göstermiştir. Önerilen
-hibrit yöntem ve kalibre edilmiş bir Gauss varyantı, bu kusuru makine
-hassasiyetine yakın düzeyde gidermiştir -bu, çalışmanın en sağlam ve en
-az tartışmalı bulgusudur.
+This study systematically examined the shape of the blending function
+used where a coarse-resolution global terrain meets a fine-detail local
+patch in an Isaac Lab-based lunar-landing environment, both at the
+analytic/CPU level and in a real Isaac Sim SAC training run. Analytic
+measurements over thirty seeds statistically confirmed that the
+previously used as-shipped Gaussian blend produces, once truncated at a
+finite radius, boundary continuity worse than smoothstep by three
+orders of magnitude, and that this defect is a scale-invariant,
+structural property. The proposed hybrid method and a calibrated
+Gaussian variant remove this defect to near-machine precision --- this
+is the study's most robust and least debatable finding.
 
-Gerçek Isaac Sim eğitim karşılaştırması, yöntem başına tek tohumla
-başlamış ve ilk ölçümde Gauss ile hibrit'in smoothstep'e göre belirgin
-biçimde daha yüksek başarı oranına ulaştığını göstermiştir. Bu bulgunun
-güvenilirliğini sınamak için çalışma iki ek bağımsız tohumla (toplam
-$n=3$) genişletilmiş ve yöntemler arasında hiçbir metrikte istatistiksel
-olarak anlamlı bir fark bulunamamıştır. Bu, çalışmanın ikinci önemli
-katkısıdır: tek-koşu RL karşılaştırmalarının ne kadar yanıltıcı
-olabileceğine dair kendi verisiyle somut bir örnek sunmakta ve Henderson
-ve ark.'nın \citep{henderson2018deep} uyarısını bu spesifik ortamda
-ampirik olarak doğrulamaktadır. Analitik sonuçlarla birlikte
-değerlendirildiğinde bu, karıştırma fonksiyonu seçiminin sınır
-sürekliliği açısından ölçülebilir ve sağlam bir etkiye sahip olduğunu,
-ancak bunun nihai RL eğitim performansına -en azından bu ölçekte ve
-$n=3$ ile ayırt edilebilir biçimde- yansımadığını göstermektedir.
+The real Isaac Sim training comparison began with a single seed per
+method, and the initial measurement showed Gaussian and hybrid reaching
+a markedly higher success rate than smoothstep. To test the reliability
+of this finding, the study was extended with two additional independent
+seeds (total $n=3$), and no statistically significant difference was
+found between the methods on any metric. This is the study's second
+major contribution: it provides a concrete, self-contained example of
+how misleading single-run RL comparisons can be, and empirically
+confirms the warning of Henderson et al.\ \citep{henderson2018deep} in
+this specific setting. Taken together with the analytic results, this
+shows that the choice of blending function has a measurable and robust
+effect on boundary continuity, but that this effect --- at least at the
+present scale and with $n=3$ --- is not reflected in final RL training
+performance in a distinguishable way.
 
-Çalışmanın temel katkısı, karıştırma fonksiyonu seçiminin salt bir
-görsel/rendering tercihi olmadığını, gerçek bir Isaac Sim/Isaac Lab
-ortamında hem analitik hem de RL-eğitimi düzeyinde nicel olarak sınayan
-bir metodoloji sunmasıdır; bu metodoloji, olumlu bir sonuç kadar
-``anlamlı fark yok'' sonucunu da güvenilir biçimde raporlayabilmiştir.
-Üç yöntem de üretim koduna geriye dönük uyumlu, seçilebilir bir
-yapılandırma olarak entegre edilmiş olup, bu bulgular doğrudan
-uygulanabilir niteliktedir: mevcut veriyle, üç yöntem arasında RL eğitim
-performansı açısından seçim yapmak için istatistiksel bir gerekçe
-yoktur; seçim, sınır sürekliliği (analitik olarak Gauss ve hibrit lehine)
-veya hesaplama maliyeti (smoothstep lehine) gibi diğer ölçütlere
-dayandırılabilir.
+The core contribution of this study is a methodology that tests the
+choice of blending function quantitatively, both analytically and at the
+level of RL training, in a real Isaac Sim/Isaac Lab environment, rather
+than treating it as a purely visual/rendering preference; this
+methodology is able to reliably report a ``no significant difference''
+result just as well as a positive one. All three methods are integrated
+into the production code as a backward-compatible, selectable
+configuration, making these findings directly actionable: with the
+current data, there is no statistical justification for choosing among
+the three methods on RL training performance; the choice can instead be
+based on other criteria such as boundary continuity (analytically in
+favor of Gaussian and hybrid) or computational cost (in favor of
+smoothstep).
 
-Gelecek çalışma için üç somut yön önerilmektedir. Birincisi, $n=3$'ün
-hâlâ düşük istatistiksel güce sahip olması nedeniyle, gerçek eğitim
-karşılaştırmasının en az beş-on bağımsız tohumla daha genişletilerek,
-gözlenen küçük ortalama farkların (özellikle Gauss'un tutarlı biçimde en
-yüksek ortalamaya sahip olması) gerçek bir etki mi yoksa kalıntı gürültü
-mü olduğunun kesin biçimde belirlenmesidir. İkincisi, eğitim ölçeğinin
-tam yapılandırmaya (1200 iterasyon) çıkarılarak, gözlenen platoların
-ara-dönem değil nihai/asimptotik bir performans farkını yansıtıp
-yansıtmadığının teyit edilmesidir. Üçüncüsü, bu çalışmanın bilinçli
-olarak dar tuttuğu kapsamın (bkz.\ \cref{sec:tartisma}) ötesine
-geçilerek, bulguların dış geçerliliğinin (external validity)
-sınanmasıdır: aynı üç karıştırma yönteminin başka bir fizik motoru,
-başka bir ödül/gözlem tasarımı veya başka bir temas zengini görev
-(ör.\ dört ayaklı yürüyüş, insansı robot ayakta durma) üzerinde
-tekrarlanması, buradaki bulguların karıştırma fonksiyonuna mı yoksa bu
-spesifik ortamın diğer tasarım seçimlerine mi bağlı olduğunu
-ayrıştıracaktır.
+Three concrete directions are proposed for future work. First, because
+$n=3$ still has low statistical power, the real-training comparison
+should be extended with at least five to ten more independent seeds to
+determine conclusively whether the small observed average differences
+(particularly the Gaussian's consistently highest average) reflect a
+real effect or residual noise. Second, the training scale should be
+extended to the full configuration (1200 iterations) to confirm whether
+the observed plateaus reflect an interim-stage rather than a
+final/asymptotic performance difference. Third, going beyond the scope
+that this study deliberately kept narrow (see \cref{sec:tartisma}), the
+external validity of the findings should be tested: repeating the same
+three blending methods on a different physics engine, a different
+reward/observation design, or a different contact-rich task (e.g.,
+quadrupedal locomotion, humanoid standing) would disentangle whether the
+findings here depend on the blending function or on other design choices
+specific to this particular environment.

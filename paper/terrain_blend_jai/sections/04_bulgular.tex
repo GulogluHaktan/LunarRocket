@@ -1,77 +1,76 @@
-\section{Bulgular}
+\section{Results}
 \label{sec:bulgular}
 
-Bu bölüm, sınır sürekliliği ve hesaplama maliyeti bulgularını, ardından
-dört ablasyon analizinin sonuçlarını ve son olarak gerçek Isaac Sim
-eğitim karşılaştırmasının sonuçlarını sunmaktadır. Yöntem tekrarı
-yapılmamış, veri/deney tasarımı ayrıntıları \cref{sec:yontem}'e
-bırakılmıştır.
+This section presents the boundary-continuity and computational-cost
+findings, then the results of the four ablation analyses, and finally
+the results of the real Isaac Sim training comparison. No method was
+repeated; data/design details are left to \cref{sec:yontem}.
 
-\subsection{Sınır Sürekliliği ve Hesaplama Maliyeti}
+\subsection{Boundary Continuity and Computational Cost}
 \label{sec:sureklilik}
 
-\Cref{tab:continuity}, otuz tohum üzerinde toplanmış (aggregated),
-yalnızca söndürülmüş ince detay bileşenini izole eden başlık (headline)
-süreklilik ölçümlerini, smoothstep'e göre oran olarak özetlemektedir.
-Üretim öncesi Gauss (\texttt{gaussian\_shipped}, $k=1{,}0$), smoothstep'e
-kıyasla ortalama 3192 kat daha kötü C0 (yükseklik) sürekliliği ve 535 kat
-daha kötü C1 (eğim) sürekliliği üretmektedir; her iki fark da Wilcoxon
-işaretli sıra testiyle son derece anlamlıdır ($p=1{,}86\times10^{-9}$,
-$n=30$). Kalibre edilmiş Gauss ($k=\ln(1000)$), bu kusuru büyük ölçüde
-gidermekte, ancak yine de smoothstep'e göre ölçülebilir düzeyde (C0'da
-yaklaşık 9,3 kat, C1'de yaklaşık 1,6 kat) daha yüksek kalıntı hata
-bırakmaktadır. Hibrit yöntem, $r=R$ sınırında analitik olarak smoothstep
-ile birebir aynı olduğundan ($\mathrm{switch}(R)=0$), otuz tohumun
-tamamında sıfır fark göstermiştir; bu, bir ölçüm sonucu değil, yöntemin
-tanımından kaynaklanan beklenen bir sonuçtur.
+\Cref{tab:continuity} summarizes, aggregated over thirty seeds, the
+headline continuity measurements that isolate only the faded fine-detail
+component, expressed as a ratio relative to smoothstep. The as-shipped
+Gaussian (\texttt{gaussian\_shipped}, $k=1.0$) produces, on average, 3192
+times worse C0 (height) continuity and 535 times worse C1 (slope)
+continuity than smoothstep; both differences are highly significant by
+the Wilcoxon signed-rank test ($p=1.86\times10^{-9}$, $n=30$). The
+calibrated Gaussian ($k=\ln(1000)$) largely removes this defect, but
+still leaves a measurably higher residual error than smoothstep
+(approximately 9.3x in C0, 1.6x in C1). The hybrid method, being
+analytically identical to smoothstep at the boundary $r=R$
+($\mathrm{switch}(R)=0$), showed zero difference across all thirty
+seeds; this is not a measurement outcome but an expected consequence of
+the method's definition.
 
 \begin{table}[t]
 \centering
-\caption{Otuz tohum üzerinde toplanmış, yalnızca ince-detay bileşenini
-izole eden sınır sürekliliği oranları (smoothstep'e göre).}
+\caption{Boundary continuity ratios (relative to smoothstep), aggregated
+over thirty seeds, isolating only the fine-detail component.}
 \label{tab:continuity}
 \footnotesize
 \begin{tabular}{@{}lccc c@{}}
 \toprule
-\textbf{Method} & \textbf{C0 oranı} & \textbf{C1 oranı} & \textbf{Wilcoxon $p$} & \textbf{$n$ (seed)} \\
+\textbf{Method} & \textbf{C0 ratio} & \textbf{C1 ratio} & \textbf{Wilcoxon $p$} & \textbf{$n$ (seeds)} \\
 \midrule
-smoothstep (referans) & 1.0 & 1.0 & -- & 30 \\
+smoothstep (reference) & 1.0 & 1.0 & -- & 30 \\
 gaussian\_shipped ($k$=1.0) & 3192x & 535x & 1.86e-09 & 30 \\
 gaussian\_calibrated ($k$=ln(1000)) & 9.3x & 1.6x & 1.86e-09 & 30 \\
-hybrid & 1.0 (özdeş) & 1.0 (özdeş) & n/a (analitik olarak özdeş) & 30 \\
+hybrid & 1.0 (identical) & 1.0 (identical) & n/a (analytically identical) & 30 \\
 \bottomrule
 \end{tabular}
 \end{table}
 
-\Cref{fig:radial-profile}, dört yöntem varyantının birleşik (makro + ince
-detay) yükseklik kesitini göstermektedir. Bu ölçekte dört eğri neredeyse
-tam olarak üst üste binmektedir, çünkü ince detay genliği (santimetre
-mertebesinde) makro arazi ölçeğine (metre mertebesinde) kıyasla çok
-küçüktür; \cref{tab:continuity}'de raporlanan büyüklük mertebesindeki
-farklar bu görsel ölçekte çıplak gözle seçilemez. Bu,
-\cref{sec:analitikprotokol}'te tanımlanan ``detail-only'' izolasyon
-adımının neden gerekli olduğunu doğrudan göstermektedir: dikiş kusuru,
-yalnızca ince detay bileşeni ayrıştırıldığında ortaya çıkmaktadır.
+\Cref{fig:radial-profile} shows the combined (macro + fine-detail) height
+cross-section of the four method variants. At this scale, the four
+curves are almost perfectly superimposed, because the fine-detail
+amplitude (centimeter scale) is much smaller than the macro terrain
+scale (meter scale); the order-of-magnitude differences reported in
+\cref{tab:continuity} cannot be seen with the naked eye at this visual
+scale. This directly demonstrates why the ``detail-only'' isolation step
+defined in \cref{sec:analitikprotokol} is necessary: the seam defect only
+appears once the fine-detail component is isolated.
 
 \begin{figure}[t]
 \centering
 \includegraphics[width=\linewidth]{fig04_radial_profile.png}
-\caption{Üç karıştırma yönteminin radyal söndürme profili.}
+\caption{Radial fade profile of the three blending methods.}
 \label{fig:radial-profile}
 \end{figure}
 
-\Cref{tab:cost}, yalnızca söndürme formülünün kendisinin (arazi
-örneklemesinden izole) mikro-saniye cinsinden hesaplama maliyetini
-göstermektedir. Smoothstep en düşük maliyete sahiptir (93,1
-mikrosaniye); Gauss varyantları (üretim öncesi ve kalibre edilmiş)
-benzer, orta düzey bir maliyete sahiptir (yaklaşık 149--150 mikrosaniye);
-hibrit yöntem ise en yüksek maliyete sahiptir (407,8 mikrosaniye,
-smoothstep'in yaklaşık 4,3 katı), çünkü her sorguda hem Gauss hem
-smoothstep dallarını hem de switch ağırlığını hesaplamaktadır.
+\Cref{tab:cost} shows the computational cost, in microseconds, of the
+fade formula alone (isolated from terrain sampling). Smoothstep has the
+lowest cost (93.1 microseconds); the Gaussian variants (as-shipped and
+calibrated) have a similar, moderate cost (approximately
+149--150 microseconds); the hybrid method has the highest cost (407.8
+microseconds, approximately 4.3x that of smoothstep), because it
+evaluates both the Gaussian and smoothstep branches as well as the
+switch weight on every query.
 
 \begin{table}[t]
 \centering
-\caption{Söndürme (fade) formülünün sorgu başına hesaplama maliyeti.}
+\caption{Per-query computational cost of the fade formula.}
 \label{tab:cost}
 \begin{tabular}{@{}lc@{}}
 \toprule
@@ -85,29 +84,28 @@ hybrid & 407.83 \\
 \end{tabular}
 \end{table}
 
-\Cref{fig:continuity-bars}, \cref{tab:continuity}'deki analitik ve
-mesh-track süreklilik ölçümlerini yöntem başına çubuk grafik olarak
-görselleştirmektedir; \texttt{gaussian\_shipped}'in dört panelin
-tamamında diğer üç yönteme kıyasla düzenlerce daha yüksek hata çubuğuna
-sahip olması, tabloda raporlanan büyüklük farkını görsel olarak da
-doğrulamaktadır.
+\Cref{fig:continuity-bars} visualizes the analytic and mesh-track
+continuity measurements from \cref{tab:continuity} as per-method bar
+charts; \texttt{gaussian\_shipped} having, in all four panels, an error
+bar orders of magnitude higher than the other three methods also
+visually confirms the magnitude difference reported in the table.
 
 \begin{figure}[t]
 \centering
 \includegraphics[width=\linewidth]{fig05_continuity_bars.png}
-\caption{Yöntemler arası C0/C1 sınır sürekliliği karşılaştırması.}
+\caption{Cross-method comparison of C0/C1 boundary continuity.}
 \label{fig:continuity-bars}
 \end{figure}
 
-\Cref{tab:vram}, iki mesh muhasebe biçimi için bellek tahminini
-göstermektedir; bu tahmin yalnızca ağ geometrisine (vertex sayısı)
-bağlıdır ve karıştırma yönteminin şekli VRAM üzerinde ölçülebilir bir
-etki yaratmamaktadır -gerçek VRAM kaldıracı, karıştırma fonksiyonu
-seçimi değil, ağ topolojisi tercihidir (iki-mesh'e karşı tek-grid).
+\Cref{tab:vram} shows the estimated memory for the two mesh-accounting
+schemes; this estimate depends only on mesh geometry (vertex count), and
+the shape of the blending method has no measurable effect on VRAM --- the
+real VRAM lever is the mesh-topology choice (two-mesh vs.\ single-grid),
+not the choice of blending function.
 
 \begin{table}[t]
 \centering
-\caption{Ağ muhasebe biçimine göre tahmini VRAM kullanımı.}
+\caption{Estimated VRAM usage by mesh-accounting scheme.}
 \label{tab:vram}
 \begin{tabular}{@{}lc@{}}
 \toprule
@@ -119,133 +117,132 @@ Single-grid (baked: one combined mesh) & 1.05 \\
 \end{tabular}
 \end{table}
 
-\Cref{fig:cost-comparison}, \cref{tab:cost} ve \cref{tab:vram}'teki maliyet
-ölçütlerini tek bir görünümde birleştirmektedir: mesh-track üretim
-süresi ve analytic-track sorgu verimi yöntemler arasında görece
-yakınken, hibrit'in fade-only maliyetteki belirgin sıçraması ve dört
-yöntemin de aynı VRAM ayak izini paylaştığı aynı grafik takımında bir
-arada görülebilmektedir.
+\Cref{fig:cost-comparison} combines the cost metrics from
+\cref{tab:cost} and \cref{tab:vram} into a single view: mesh-track
+generation time and analytic-track query throughput are relatively close
+across methods, while the hybrid method's marked jump in fade-only cost
+and the fact that all four methods share the same VRAM footprint can be
+seen together in the same figure panel.
 
 \begin{figure}[t]
 \centering
 \includegraphics[width=\linewidth]{fig06_cost_comparison.png}
-\caption{Yöntemler arası hesaplama maliyeti karşılaştırması.}
+\caption{Cross-method comparison of computational cost.}
 \label{fig:cost-comparison}
 \end{figure}
 
-\subsection{Ablasyon Analizleri}
+\subsection{Ablation Analyses}
 \label{sec:ablasyon}
 
-Bu bölüm, önerilen hibrit yöntemin dört tasarım parametresine (temas
-yarıçapı, switch genişliği, geçiş yarıçapı, grid çözünürlüğü) karşı
-sağlamlığını sınayan dört ayrı ablasyon analizini sunmaktadır.
+This section presents four separate ablation analyses that test the
+robustness of the proposed hybrid method against four design parameters
+(contact radius, switch width, transition radius, grid resolution).
 
-Hibrit yöntemin temas yarıçapı ($r_c$) taramasında (1,0--4,0~m;
-\cref{fig:ablation-rc}), switch'in kendi iç geçiş sınırındaki ($r=r_c$)
-C0 süreksizliği tüm $r_c$ değerlerinde $3\times10^{-4}$~m'nin altında
-kalmış ve söndürme maliyeti $r_c$'den bağımsız olarak sabit (yaklaşık
-755--793 mikrosaniye) kalmıştır; bu, maliyetin switch'in nerede
-konumlandığından değil, iki dalın da her durumda hesaplanmasından
-kaynaklandığını doğrulamaktadır.
+In the hybrid method's contact-radius ($r_c$) sweep (1.0--4.0~m;
+\cref{fig:ablation-rc}), the C0 discontinuity at the switch's own
+internal transition boundary ($r=r_c$) stayed below $3\times10^{-4}$~m
+across all values of $r_c$, and the fade cost remained constant
+(approximately 755--793 microseconds) independent of $r_c$; this
+confirms that the cost stems from both branches being evaluated in every
+case, not from where the switch is positioned.
 
 \begin{figure}[t]
 \centering
 \includegraphics[width=\linewidth]{fig07_ablation_rc.png}
-\caption{Temas yarıçapı ($r_c$) taraması: switch iç sürekliliği ve
-maliyet.}
+\caption{Contact-radius ($r_c$) sweep: switch internal continuity and
+cost.}
 \label{fig:ablation-rc}
 \end{figure}
 
-Switch genişliği ($w$) taramasında (0,05--2,0~m; \cref{fig:ablation-w}),
-switch'in iç sürekliliği $w=0{,}05$~m'de $7{,}03\times10^{-4}$~m'den
-$w=1{,}0$~m'de $1{,}74\times10^{-7}$~m'ye kadar düzenli olarak
-iyileşmiş, ancak $w=2{,}0$~m'de hafifçe kötüleşmiştir
-($1{,}83\times10^{-5}$~m); bu, switch genişliğinin temas yarıçapına yakın
-büyüklüklere ulaştığında switch'in yerel eğriliğini bozmaya başladığını
-düşündürmekte ve makine hassasiyetine yakın bir iç süreklilik için $w$
-yaklaşık 0,3--1,0~m aralığının uygun bir varsayılan olduğunu
-göstermektedir; üretim yapılandırmasında kullanılan $w=0{,}3$~m, bu
-aralığın içinde bilinçli bir güvenlik marjı sağlamaktadır.
+In the switch-width ($w$) sweep (0.05--2.0~m; \cref{fig:ablation-w}), the
+switch's internal continuity improved steadily from $7.03\times10^{-4}$~m
+at $w=0.05$~m to $1.74\times10^{-7}$~m at $w=1.0$~m, but degraded
+slightly at $w=2.0$~m ($1.83\times10^{-5}$~m); this suggests that once
+the switch width approaches a magnitude comparable to the contact
+radius, it begins to distort the switch's local curvature, and indicates
+that a range of approximately $w=0.3$--$1.0$~m is a suitable default for
+near-machine-precision internal continuity; the $w=0.3$~m used in the
+production configuration provides a deliberate safety margin within this
+range.
 
 \begin{figure}[t]
 \centering
 \includegraphics[width=\linewidth]{fig08_ablation_w.png}
-\caption{Switch genişliği ($w$) taraması: iç süreklilik.}
+\caption{Switch-width ($w$) sweep: internal continuity.}
 \label{fig:ablation-w}
 \end{figure}
 
-Bu kusurun geçiş yarıçapından bağımsız olup olmadığını sınamak amacıyla
-yapılan yarıçap taramasında ($R=4,6,8,12,16$~m; \cref{fig:ablation-R}),
-üretim öncesi Gauss'un C0 (RMS) hatası neredeyse sabit kalmaktadır
-(yaklaşık $1{,}68\times10^{-3}$ ile $1{,}76\times10^{-3}$~m arası), yani
-hata geçiş yarıçapı büyüdükçe küçülmemektedir; buna karşın smoothstep ve
-kalibre edilmiş Gauss'un hatası, yarıçap büyüdükçe (eğrilik azaldıkça)
-beklendiği gibi düzenli olarak azalmaktadır. Bu, üretim öncesi Gauss'un
-kusurunun bir ayrıklaştırma (discretization) hatası değil, geçiş
-yarıçapından bağımsız, ölçek değişmez bir yapısal özellik olduğunu
-göstermektedir.
+In the radius sweep ($R=4,6,8,12,16$~m; \cref{fig:ablation-R}), carried
+out to test whether this defect is independent of the transition radius,
+the as-shipped Gaussian's C0 (RMS) error stays nearly constant
+(approximately $1.68\times10^{-3}$ to $1.76\times10^{-3}$~m), i.e., the
+error does not shrink as the transition radius grows; by contrast, the
+error of smoothstep and the calibrated Gaussian decreases steadily as
+the radius grows (and curvature decreases), as expected. This shows that
+the as-shipped Gaussian's defect is not a discretization error but a
+scale-invariant structural property independent of the transition
+radius.
 
 \begin{figure}[t]
 \centering
 \includegraphics[width=\linewidth]{fig09_ablation_R.png}
-\caption{Geçiş yarıçapı ($R$) taraması: ölçek değişmezliği.}
+\caption{Transition-radius ($R$) sweep: scale invariance.}
 \label{fig:ablation-R}
 \end{figure}
 
-Grid çözünürlüğü taramasında (grid aralığı yaklaşık 0,31--1,27~m;
-\cref{fig:ablation-grid}), smoothstep ve hibrit yöntemlerin ampirik
-yakınsama derecesi (log-log doğrusal regresyon eğimi) yaklaşık 0,90
-olarak ölçülmüş, yani hata çözünürlük arttıkça beklenen şekilde
-azalmaktadır. Kalibre edilmiş Gauss'ta ise negatif bir eğim (yaklaşık
-$-0{,}36$) gözlenmiştir; ancak bu bir fiziksel ``çözünürlük arttıkça
-kötüleşme'' bulgusu değildir -kalibre edilmiş Gauss'un hatası zaten
-$10^{-6}$ ile $10^{-7}$~m mertebesinde, kalibrasyon sabitinin
-belirlediği sabit bir kesme-kalıntısı gürültü tabanına yakındır ve bu
-taban, grid çözünürlüğünden bağımsız bir ölçüm sınırı oluşturmaktadır; bu
-husus, yanıltıcı bir fiziksel yorumdan kaçınmak için burada açıkça
-belirtilmektedir.
+In the grid-resolution sweep (grid spacing approximately 0.31--1.27~m;
+\cref{fig:ablation-grid}), the empirical convergence order (log-log
+linear-regression slope) of smoothstep and hybrid was measured at
+approximately 0.90, i.e., the error decreases as expected as resolution
+increases. For the calibrated Gaussian, a negative slope
+(approximately $-0.36$) was observed; however, this is not a physical
+``gets worse as resolution increases'' finding --- the calibrated
+Gaussian's error is already on the order of $10^{-6}$ to $10^{-7}$~m,
+close to a fixed truncation-residual noise floor set by the calibration
+constant, and this floor is a measurement limit independent of grid
+resolution; this point is stated explicitly here to avoid a misleading
+physical interpretation.
 
 \begin{figure}[t]
 \centering
 \includegraphics[width=\linewidth]{fig10_ablation_grid.png}
-\caption{Grid çözünürlüğü taraması: ampirik yakınsama derecesi.}
+\caption{Grid-resolution sweep: empirical convergence order.}
 \label{fig:ablation-grid}
 \end{figure}
 
-Dört analizin ortak sonucu, önerilen hibrit yöntemin süreklilik
-avantajının, makul bir parametre aralığında ($r_c=1{,}0$--$4{,}0$~m,
-$w=0{,}3$--$1{,}0$~m) sağlam (robust) olduğu, yani belirli bir ince
-ayara aşırı duyarlı olmadığıdır. Tek istisna, çok dar switch
-genişliklerinde ($w\le 0{,}1$~m) iç sürekliliğin gözle görülür biçimde
-bozulmasıdır; bu, üretim yapılandırmasında ($w=0{,}3$~m) kullanılan
-varsayılanın bilinçli bir güvenlik marjı içerdiğini bir kez daha
-doğrulamaktadır.
+The common conclusion of the four analyses is that the proposed hybrid
+method's continuity advantage is robust over a reasonable parameter
+range ($r_c=1.0$--$4.0$~m, $w=0.3$--$1.0$~m), i.e., it is not overly
+sensitive to a particular fine-tuning. The one exception is that at very
+narrow switch widths ($w\le 0.1$~m) internal continuity visibly degrades;
+this once again confirms that the default used in the production
+configuration ($w=0.3$~m) carries a deliberate safety margin.
 
-\subsection{Gerçek Isaac Sim Eğitim Sonuçları}
+\subsection{Real Isaac Sim Training Results}
 \label{sec:egitimsonuclari}
 
-Dokuz eğitim koşusunun (3 yöntem x 3 tohum) tamamı hatasız
-tamamlanmış, her biri 5.734.400 ortam adımına ulaşmıştır
-(\cref{tab:training}). Duvar saati (wall-clock) süresi, yöntem
-ortalaması olarak smoothstep için $2377\pm 98$~s, kalibre edilmiş Gauss
-için $2850\pm 898$~s ve hibrit için $2674\pm 599$~s'dir. Bu ortalamalar,
-ilk (seed=42) koşularda gözlenen büyük farkın (Gauss ve hibrit sırasıyla
-\%56 ve \%35 daha yavaş) çoklu tohumla büyük ölçüde küçüldüğünü
-göstermektedir: seed=7 ve seed=123 koşularının üçü de birbirine yakın
-(2318--2345~s) sürerken, yalnızca seed=42'deki Gauss ve hibrit koşuları
-belirgin biçimde daha yavaştır. Standart sapmaların büyüklüğü (898 ve
-599~s, ortalamanın \%20--30'u) bu tek-koşu sapmasının kaynağıdır;
-dolayısıyla ilk ölçümdeki ``\%35--56 daha yavaş'' bulgusu, karıştırma
-formülünün kendisinden değil, o belirli koşuya özgü sistem-düzeyi bir
-değişkenlikten (arka plan yükü, termal durum veya terrain havuzu
-zamanlaması) kaynaklanmış olabilir; üç tohumun ortalamasına bakıldığında
-Gauss ve hibrit hâlâ smoothstep'ten yavaş görünmektedir (+\%20 ve
-+\%12,5) ama bu fark artık ilk ölçümdeki kadar keskin değildir.
+All nine training runs (3 methods $\times$ 3 seeds) completed without
+error, each reaching 5,734,400 environment steps (\cref{tab:training}).
+Wall-clock time, as a per-method average, was
+$2377\pm 98$~s for smoothstep, $2850\pm 898$~s for the calibrated
+Gaussian, and $2674\pm 599$~s for the hybrid. These averages show that
+the large gap observed in the initial (seed=42) runs (Gaussian and
+hybrid respectively 56\% and 35\% slower) shrinks considerably with
+multiple seeds: the seed=7 and seed=123 runs are all close to each other
+(2318--2345~s), while only the seed=42 Gaussian and hybrid runs are
+noticeably slower. The magnitude of the standard deviations (898 and
+599~s, 20--30\% of the mean) is the source of this single-run deviation;
+the initial ``35--56\% slower'' finding may therefore stem not from the
+blending formula itself but from a system-level variability specific to
+that particular run (background load, thermal state, or terrain-pool
+timing); averaged over three seeds, Gaussian and hybrid still appear
+slower than smoothstep (+20\% and +12.5\%), but this gap is no longer as
+sharp as in the initial measurement.
 
 \begin{table}[t]
 \centering
-\caption{Gerçek Isaac Sim eğitiminde son yüzde onluk pencere özeti
-(yöntem başına üç tohum).}
+\caption{Summary of the final 10\% window in real Isaac Sim training
+(three seeds per method).}
 \label{tab:training}
 \footnotesize
 \begin{tabular}{@{}lccccc@{}}
@@ -259,23 +256,25 @@ hybrid & 3 & $2674\pm 599$ & $0.268\pm 0.025$ & $0.515\pm 0.019$ & $0.214\pm 0.0
 \end{tabular}
 \end{table}
 
-Son yüzde on penceresinde ölçülen nihai başarı oranı, yöntem ortalaması
-olarak smoothstep için \%27,8~$\pm$~\%5,5, kalibre edilmiş Gauss için
-\%32,5~$\pm$~\%5,1 ve hibrit için \%26,8~$\pm$~\%2,5 olarak bulunmuştur
-(\cref{tab:training}). Gauss'un ortalaması hâlâ en yüksektir, ancak üç
-yöntemin standart sapmaları birbirleriyle örtüşmektedir. \Cref{tab:pairwise},
-bu farkların ikili istatistiksel testlerini özetlemektedir: hiçbir ikili
-karşılaştırma istatistiksel olarak anlamlı değildir; başarı oranında
-smoothstep-Gauss $p=0{,}20$, smoothstep-hibrit $p=1{,}00$, Gauss-hibrit
-$p=0{,}40$; zaman aşımı oranında sırasıyla $p=0{,}70$, $p=1{,}00$,
-$p=0{,}40$; sert iniş oranında üçü de $p\ge 0{,}70$. Bootstrap \%95 güven
-aralıklarının tamamı sıfırı kapsamaktadır (ör.\ Gauss-hibrit başarı
-oranı farkı için $[-0{,}000,\,0{,}104]$ -sınırda ama sıfırı içeriyor).
+The final success rate measured in the last 10\% window was, as a
+per-method average, $27.8\%\pm 5.5\%$ for smoothstep,
+$32.5\%\pm 5.1\%$ for the calibrated Gaussian, and $26.8\%\pm 2.5\%$ for
+the hybrid (\cref{tab:training}). The Gaussian's average is still the
+highest, but the standard deviations of the three methods overlap with
+each other. \Cref{tab:pairwise} summarizes the pairwise statistical
+tests of these differences: no pairwise comparison is statistically
+significant; for success rate, smoothstep-Gaussian $p=0.20$,
+smoothstep-hybrid $p=1.00$, Gaussian-hybrid $p=0.40$; for timeout rate,
+respectively $p=0.70$, $p=1.00$, $p=0.40$; for harsh-landing rate, all
+three $p\ge 0.70$. All bootstrap 95\% confidence intervals include zero
+(e.g., for the Gaussian-hybrid success-rate difference,
+$[-0.000,\,0.104]$ --- borderline but still containing zero).
 
 \begin{table}[t]
 \centering
-\caption{Son yüzde onluk pencere üzerinde ikili karşılaştırmalar
-(Mann-Whitney U, betimsel; bkz. \cref{sec:egitimprotokolu} çekincesi).}
+\caption{Pairwise comparisons over the final 10\% window
+(Mann-Whitney U, descriptive; see the caveat in
+\cref{sec:egitimprotokolu}).}
 \label{tab:pairwise}
 \footnotesize
 \begin{tabular}{@{}llcccc@{}}
@@ -295,68 +294,70 @@ Harsh-landing & gaussian vs hybrid & 3 vs 3 & $0.004$ & $[-0.027, 0.047]$ & 7.00
 \end{tabular}
 \end{table}
 
-\Cref{fig:training-curves}, üç yöntemin dokuz koşusunun tamamını üç ana
-sonuç metriği (başarı, zaman aşımı, sert iniş oranı) için aynı grafik
-üzerinde göstermektedir; dokuz eğrinin de eğitim boyunca büyük ölçüde iç
-içe geçmiş olması, yöntemler arası farkın tohumlar arası varyanstan
-görsel olarak ayırt edilemediğini doğrulamaktadır. \Cref{fig:training-diag},
-aynı dokuz koşu için müfredat zorluğu, entropi katsayısı ve
-xy-ilerleme ödülü gibi tamamlayıcı eğitim diyagnostiklerini
-göstermektedir; entropi katsayısının üç yöntemde de neredeyse özdeş bir
-yakınsama eğrisi izlemesi, SAC'ın keşif-sömürü dengesinin karıştırma
-yöntemi seçiminden bağımsız işlediğine işaret etmektedir.
-\Cref{fig:final-window-box}, son yüzde onluk pencere değerlerini yöntem
-başına dağılım noktaları ve ortalama $\pm$ standart sapma çubuğu olarak
-sunmaktadır; üç yöntemin hata çubuklarının geniş ölçüde örtüştüğü buradan
-da açıkça görülmektedir.
+\Cref{fig:training-curves} shows all nine runs of the three methods for
+the three main outcome metrics (success, timeout, and harsh-landing
+rate) on the same plot; the fact that all nine curves remain largely
+interleaved throughout training confirms that the cross-method
+difference is visually indistinguishable from cross-seed variance.
+\Cref{fig:training-diag} shows complementary training diagnostics
+(curriculum difficulty, entropy coefficient, xy-progress reward) for the
+same nine runs; the entropy coefficient following an almost identical
+convergence curve across all three methods indicates that SAC's
+exploration-exploitation balance operates independently of the choice of
+blending method. \Cref{fig:final-window-box} presents the final-10\%
+window values as per-method scatter points with a mean $\pm$ standard
+deviation bar; the wide overlap of the three methods' error bars is also
+clearly visible here.
 
 \begin{figure}[t]
 \centering
 \includegraphics[width=\linewidth]{fig11_training_curves.png}
-\caption{Üç yöntem için eğitim boyunca izlenen sonuç metrikleri
-(başarı/zaman aşımı/sert iniş oranı).}
+\caption{Outcome metrics tracked during training for the three methods
+(success/timeout/harsh-landing rate).}
 \label{fig:training-curves}
 \end{figure}
 
 \begin{figure}[t]
 \centering
 \includegraphics[width=\linewidth]{fig12_training_diagnostics.png}
-\caption{Üç yöntem için eğitim boyunca izlenen tamamlayıcı
-diyagnostikler (müfredat zorluğu, entropi katsayısı, xy-ilerleme ödülü).}
+\caption{Complementary diagnostics tracked during training for the three
+methods (curriculum difficulty, entropy coefficient, xy-progress
+reward).}
 \label{fig:training-diag}
 \end{figure}
 
 \begin{figure}[t]
 \centering
 \includegraphics[width=\linewidth]{fig13_final_window_box.png}
-\caption{Son yüzde onluk pencere dağılımları (kutu grafiği).}
+\caption{Distributions over the final 10\% window (box plot).}
 \label{fig:final-window-box}
 \end{figure}
 
-Bu sonuç, ilk (tek tohumlu) ölçümde gözlenen ve \cref{sec:tartisma}'te
-ayrıntılı olarak tartışılan ``Gauss ve hibrit'in smoothstep'ten anlamlı
-derecede daha başarılı olduğu'' bulgusunu doğrulamamaktadır. $n=1$'den
-$n=3$'e çıkıldığında etki büyüklüğü küçülmüş (Gauss-smoothstep farkı
-\%11'den \%4,7'ye düşmüş) ve yön kısmen değişmiştir
-(hibrit-smoothstep farkı işaret değiştirmiştir: ilk ölçümde hibrit
-smoothstep'ten yüksekti, üç-tohum ortalamasında hibrit smoothstep'e
-neredeyse eşittir, hatta hafifçe düşüktür). Bu örüntü, ilk bulgunun -en
-azından büyük ölçüde- rastgele koşu-koşu varyansıyla tutarlı olduğunu
-göstermektedir; bu husus \cref{sec:tartisma}'te ayrıntılı olarak
-tartışılmaktadır.
+This result does not confirm the finding observed in the initial
+(single-seed) measurement --- discussed in detail in
+\cref{sec:tartisma} --- that ``Gaussian and hybrid are significantly
+more successful than smoothstep.'' Going from $n=1$ to $n=3$, the effect
+size shrank (the Gaussian-smoothstep gap dropped from 11\% to 4.7\%) and
+the direction partly reversed (the hybrid-smoothstep gap changed sign:
+in the initial measurement hybrid was higher than smoothstep, while in
+the three-seed average hybrid is nearly equal to smoothstep, even
+slightly lower). This pattern indicates that the initially apparent
+difference is --- at least largely --- consistent with ordinary
+run-to-run (seed) variance; this point is discussed in detail in
+\cref{sec:tartisma}.
 
-Sample-efficiency ölçütlerinde de benzer bir görünüm vardır: AUC (eğitim
-boyunca ortalama başarı oranı) yöntem başına üç tohum arasında geniş bir
-aralıkta değişmektedir (smoothstep 0,381--0,395, Gauss 0,366--0,402,
-hibrid 0,339--0,399) ve yöntemler arası fark, tohumlar arası farktan
-belirgin biçimde küçüktür -bu da yine tohum varyansının baskın kaynak
-olduğuna işaret etmektedir.
+A similar picture holds for sample-efficiency metrics: AUC (the average
+success rate over training) varies over a wide range across the three
+seeds per method (smoothstep 0.381--0.395, Gaussian 0.366--0.402, hybrid
+0.339--0.399), and the cross-method difference is markedly smaller than
+the cross-seed difference --- again pointing to seed variance as the
+dominant source.
 
-Müfredat zorluğu, üç yöntemde de ortalama olarak birbirine yakındır
-(smoothstep $0{,}276\pm 0{,}025$, Gauss $0{,}250\pm 0{,}000$, hibrit
-$0{,}260\pm 0{,}017$); Gauss'un üç tohumda da tam olarak $0{,}25$'te
-sabit kalması (sıfır standart sapma) dikkat çekicidir ve rolling-window
-başarı eşiğinin bu üç koşuda da aynı basamakta durduğunu göstermektedir
--bu, ilk ölçümde öne sürülen ``Gauss'un yüksek ortalama başarıya rağmen
-müfredatta geride kaldığı'' gözlemiyle tutarlıdır, ancak nedeni doğrudan
-test edilmemiştir.
+Curriculum difficulty is, on average, close across all three methods
+(smoothstep $0.276\pm 0.025$, Gaussian $0.250\pm 0.000$, hybrid
+$0.260\pm 0.017$); it is notable that the Gaussian stays at exactly
+$0.25$ in all three seeds (zero standard deviation), indicating that the
+rolling-window success threshold sat at the same rung in all three runs
+--- this is consistent with the observation, raised in the initial
+measurement, that ``the Gaussian lags in curriculum despite a high
+average success rate,'' although the cause was not directly tested.

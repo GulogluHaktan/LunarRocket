@@ -1,5 +1,5 @@
 %% ===========================================================================
-%%  Ay Inisi Simulasyonlarinda Arazi Ince-Detay Gecisi
+%%  Terrain Fine-Detail Blending in Lunar-Landing Simulations
 %%  Journal of Automation and Intelligence submission build.
 %%  Elsevier CAS bundle, single-column class (cas-sc). To switch to the
 %%  double-column typeset layout, change the \documentclass line below to
@@ -26,17 +26,9 @@
 \emergencystretch=2em
 \usepackage{cleveref}
 \crefname{equation}{Eq.}{Eqs.}
-% Note: cleveref auto-uppercases the first letter of a \crefname base for
-% \Cref; doing that to a UTF-8 "Ş" crashes expl3's low-level string code
-% ("Improper alphabetic constant"). Give explicit \Crefname forms (built
-% from a plain ASCII "s"/"S" plus a TeX accent command) so no runtime
-% uppercasing of a UTF-8 letter is ever needed.
-\crefname{figure}{\c{s}ekil}{\c{s}ekiller}
-\Crefname{figure}{\c{S}ekil}{\c{S}ekiller}
-\crefname{table}{tablo}{tablolar}
-\Crefname{table}{Tablo}{Tablolar}
-\crefname{section}{bölüm}{bölümler}
-\Crefname{section}{Bölüm}{Bölümler}
+\crefname{figure}{Fig.}{Figs.}
+\crefname{table}{Table}{Tables}
+\crefname{section}{Section}{Sections}
 
 % ---- CAS class tweaks ---------------------------------------------------------
 % (a) name the target journal in the first-page footer (default: "Elsevier")
@@ -146,7 +138,6 @@ blending \sep Continuity analysis
 
 \maketitle
 
-\input{sections/00_ozet}
 \input{sections/01_giris}
 \input{sections/02_ilgili_calismalar}
 \input{sections/03_yontem}
@@ -154,28 +145,29 @@ blending \sep Continuity analysis
 \input{sections/05_tartisma}
 \input{sections/06_sonuc}
 
-\section*{Teşekkür}
-Bu çalışma, harici bir fon veya kurumsal destek almaksızın, yazarın kendi
-hesaplama kaynakları (yerel NVIDIA GPU iş istasyonu) kullanılarak
-gerçekleştirilmiştir. Yazar, Isaac Lab ve Isaac Sim'i açık kaynaklı olarak
-geliştiren NVIDIA ekibine ve deney altyapısında kullanılan açık kaynaklı
-yazılım kütüphanelerine (Stable-Baselines3, PyTorch, NumPy, SciPy,
-TensorBoard) teşekkür eder.
+\section*{Acknowledgment}
+This work was carried out without any external funding or institutional
+support, using the author's own computational resources (a local NVIDIA
+GPU workstation). The author thanks the NVIDIA team for developing Isaac
+Lab and Isaac Sim as open-source software, and the open-source software
+libraries used in the experimental infrastructure (Stable-Baselines3,
+PyTorch, NumPy, SciPy, TensorBoard).
 
-\section*{Çıkar Çatışması Beyanı}
-Yazar, bu çalışmayla ilgili bilinen herhangi bir mali çıkar çatışması veya
-kişisel ilişki bulunmadığını beyan eder.
+\section*{Declaration of competing interest}
+The author declares that he has no known competing financial interests
+or personal relationships related to this work.
 
-\section*{Veri ve Kod Erişilebilirliği}
-Bu çalışmada kullanılan analitik değerlendirme kodu (üç karıştırma
-fonksiyonunun NumPy taşıması, süreklilik/maliyet metrikleri, ablasyon
-betikleri), üretim ortamı kodu (Isaac Lab görev tanımı ve üç yöntemin
-ISAACLAB\_TERRAIN\_BLEND\_METHOD ile seçilebilir entegrasyonu) ve ham
-deney çıktıları (otuz tohumlu süreklilik ölçümleri, dört ablasyon
-taraması, gerçek eğitim TensorBoard günlükleri) yazarın proje deposunda
-saklanmaktadır ve makul talep üzerine yazardan temin edilebilir. Kodun,
-makale değerlendirme sürecinde kamuya açık bir depoya taşınması
-planlanmaktadır.
+\section*{Data and code availability}
+The analytic evaluation code used in this study (the NumPy port of the
+three blending functions, the continuity/cost metrics, and the ablation
+scripts), the production environment code (the Isaac Lab task definition
+and the selectable integration of the three methods via
+ISAACLAB\_TERRAIN\_BLEND\_METHOD), and the raw experimental outputs (the
+thirty-seed continuity measurements, the four ablation sweeps, and the
+real-training TensorBoard logs) are stored in the author's project
+repository and are available from the author upon reasonable request.
+The code is planned to be moved to a publicly accessible repository
+during the manuscript review process.
 
 \printcredits
 
@@ -183,15 +175,17 @@ planlanmaktadır.
 \bibliography{refs}
 
 \bio{photo-haktan}
-Haktan Yusuf Güloğlu, Profilo Mesleki ve Teknik Anadolu Lisesi'nden sınıf
-birincisi olarak mezun olmuş olup hâlen Sakarya Üniversitesi Bilgisayar
-Mühendisliği bölümünde lisans öğrencisidir. Sakarya Üniversitesi Millî
-Teknoloji Atölyesi Yapay Zekâ Merkezi'nde öğrenci araştırmacı olarak
-çalışmaktadır; araştırma ilgi alanları pekiştirmeli öğrenme, prosedürel
-simülasyon ortamları ve fizik motorlarında temas geometrisinin sayısal
-doğruluğudur. Bu çalışmada kavramsallaştırmadan deney tasarımına, yazılım
-uygulamasından istatistiksel analize ve yazıma kadar tüm aşamaları tek
-yazar olarak yürütmüştür.
+Haktan Yusuf Güloğlu graduated at the top of his class from Profilo
+Vocational and Technical Anatolian High School and is currently an
+undergraduate student in Computer Engineering at Sakarya University. He
+works as a student researcher at Sakarya University's National
+Technology Workshop Artificial Intelligence Center, where his research
+interests center on reinforcement learning, procedural simulation
+environments, and the numerical accuracy of contact geometry in physics
+engines. He carried out this study's entire pipeline --- from
+conceptualization and experimental design through the software
+implementation to the statistical analysis and writing --- as its sole
+author.
 \endbio
 
 \end{document}

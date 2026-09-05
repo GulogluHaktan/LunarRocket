@@ -1,122 +1,126 @@
-\section{Giriş}
+\section{Introduction}
 \label{sec:giris}
 
-Otonom ay inişi, güç inişi (powered descent) evresinde gerçek zamanlı
-olarak kraterli, kayalık ve eğimli bir arazi üzerinde hassas
-konumlandırma ve güvenli temas gerektiren, doğrudan operasyonel sonuçları
-olan bir kontrol problemidir. Son yıllarda GPU paralel fizik motorları
-(NVIDIA PhysX) ve buna dayalı simülasyon çerçeveleri, binlerce ortamı eş
-zamanlı çalıştırarak derin pekiştirmeli öğrenmeyle (RL) karmaşık temas
-zengini görevlerin pratik sürelerde öğrenilmesini mümkün kılmıştır
-\citep{mittal2023orbit,nvidia2025isaaclab,rudin2022walking}. Bu
-çalışmanın temelini oluşturan proje de bu sınıfa girer: dört bacaklı, iki
-eksenli gimbal itkili bir roketin, Soft Actor-Critic (SAC) algoritmasıyla,
-gerçek dijital yükseklik modeli (DEM) tabanlı bir makro yüzey üzerine
-bindirilmiş kraterler, kayalar ve santimetre ölçekli regolit dokusuyla
-zenginleştirilmiş prosedürel bir ay zemininde inişi öğrendiği bir Isaac
-Lab doğrudan iş akışı (direct-workflow) görevidir.
+Autonomous lunar landing is a control problem with direct operational
+consequences: during the powered-descent phase it requires real-time
+precision positioning and safe touchdown over a cratered, rocky, and
+sloped terrain. In recent years, GPU-parallel physics engines (NVIDIA
+PhysX) and the simulation frameworks built on them have made it
+practical to learn complex, contact-rich tasks with deep reinforcement
+learning (RL) by running thousands of environments concurrently
+\citep{mittal2023orbit,nvidia2025isaaclab,rudin2022walking}. The project
+underlying this study belongs to this class: an Isaac Lab
+direct-workflow task in which a four-legged, dual-axis gimbal-thrust
+rocket learns to land, using Soft Actor-Critic (SAC), on a procedural
+lunar terrain that layers craters, rocks, and centimeter-scale regolith
+texture on top of a macro surface derived from a real digital elevation
+model (DEM).
 
-Bu tarz prosedürel çok çözünürlüklü arazilerde, hesaplama ve bellek
-bütçesini sınırlı tutmak için tipik olarak iki katman kullanılır: geniş
-alanı kapsayan düşük çözünürlüklü bir küresel (global) yüzey ve ajanın ya
-da hedefin yakınında yalnızca gerekli bölgede oluşturulan yüksek
-çözünürlüklü bir yerel (local) yama. Bu iki katmanın dikişsiz birleşmesi,
-bilgisayar grafikleri literatüründe yirmi beş yılı aşkın süredir
-çalışılan klasik bir problemdir (geometry clipmaps için
-\citep{losasso2004geometry}; ROAM için \citep{duchaineau1997roaming};
-geomipmapping için \citep{deboer2000geomipmapping}). Ancak bu literatür
-neredeyse tamamen görsel işleme (rendering) kalitesine odaklanır;
-birleşme sınırındaki bir süreksizliğin, ayağın zeminle temasını, yükseklik
-sensörü okumalarını veya bir RL ajanının proprioseptif gözleminin
-gürültü karakterini nasıl etkilediği nicel olarak nadiren ele alınır.
+In procedural multi-resolution terrain of this kind, two layers are
+typically used to keep the computation and memory budget bounded: a
+low-resolution global surface covering a wide area, and a
+high-resolution local patch generated only where needed, near the agent
+or the target. Seamlessly joining these two layers is a classic problem
+that has been studied in the computer-graphics literature for more than
+twenty-five years (geometry clipmaps: \citep{losasso2004geometry}; ROAM:
+\citep{duchaineau1997roaming}; geomipmapping:
+\citep{deboer2000geomipmapping}). However, this literature focuses
+almost entirely on rendering quality; how a discontinuity at the seam
+affects the leg's contact with the ground, altimeter readings, or the
+noise character of an RL agent's proprioceptive observation is rarely
+addressed quantitatively.
 
-Bu problem, incelenen sistemde iki farklı ve birbiriyle tutarsız çözümle
-karşımıza çıkmaktadır: eğitim ortamı katmanlar arasında geçişi kompakt
-destekli bir kübik smoothstep fonksiyonuyla sağlarken, önceden kullanılan
-mesh tabanlı bir uygulama sonsuz destekli bir Gauss çanı kullanmaktadır.
-Bu iki fonksiyon, matematiksel olarak temelden farklı bir özelliğe
-sahiptir: smoothstep sonlu bir yarıçapta tam olarak sıfıra iner (kompakt
-destek), oysa standart Gauss çanı hiçbir sonlu yarıçapta tam sıfıra
-inmez (sonsuz destek; \citep{hardy1971multiquadric}) ve bir mühendislik
-uygulamasında kullanılabilmesi için mutlaka bir noktada kesilmesi
-(truncation) gerekir; bu kesme işlemi, kesim noktasında yeni ve
-ölçülebilir bir dikiş (seam) yaratma riski taşır. Bu iki yöntemi adil
-biçimde karşılaştırmak, ikisini de aynı geçiş yarıçapında sıfıra
-zorlamayı (hard truncation) ve aynı geçiş bütçesi altında ölçmeyi
-gerektirir; bu karşılaştırma biçimi, yapılan literatür taramasında
-terrain-randomization çalışmalarının hiçbirinde doğrudan ele alınmamıştır
-(bkz. \cref{sec:ilgili}).
+This problem manifests in the system under study as two different and
+mutually inconsistent solutions: the training environment blends the
+layers with a compact-support cubic smoothstep function, while a
+previously used mesh-based implementation uses an infinite-support
+Gaussian bell. These two functions differ in a fundamentally different
+mathematical property: smoothstep decays to exactly zero at a finite
+radius (compact support), whereas a standard Gaussian bell never reaches
+exactly zero at any finite radius (infinite support;
+\citep{hardy1971multiquadric}) and must necessarily be truncated at some
+point to be used in an engineering application; this truncation risks
+creating a new, measurable seam at the cut point. Comparing the two
+methods fairly requires forcing both to zero at the same transition
+radius (hard truncation) and measuring them under the same transition
+budget; to the best of our literature search, this comparison has not
+been directly addressed in any terrain-randomization study (see
+\cref{sec:ilgili}).
 
-Bu gözlemlerden hareketle çalışma üç araştırma sorusuna yanıt aramaktadır:
-
-\begin{itemize}
-\item \textbf{AS1:} Kompakt destekli (smoothstep) ve sonsuz destekli
-(Gauss) karıştırma fonksiyonları, aynı geçiş yarıçapı bütçesi altında
-adil biçimde karşılaştırıldığında, sınır sürekliliği (C0/C1) açısından
-nicel olarak ne kadar farklıdır ve bu fark hesaplama/bellek maliyetiyle
-nasıl bir denge (trade-off) oluşturur?
-\item \textbf{AS2:} İniş ayağı temas bölgesinde Gauss, ötesinde
-smoothstep kullanan bir hibrit karıştırma yöntemi, her iki yöntemin
-süreklilik avantajlarını makul bir hesaplama maliyeti artışıyla
-birleştirebilir mi?
-\item \textbf{AS3:} Bu üç karıştırma yönteminin sürekliliğindeki farklar,
-gerçek bir Isaac Sim/Isaac Lab SAC eğitiminde ölçülebilir bir öğrenme
-performansı farkına yansır mı?
-\end{itemize}
-
-Bu doğrultuda çalışmanın amacı üç yönlüdür: (i) mevcut smoothstep
-yöntemini ve önceden kullanılan Gauss yöntemini aynı mimaride, aynı
-geçiş bütçesi altında nicel olarak karşılaştırmak; (ii) iki yöntemin
-avantajlarını birleştiren bir hibrit yöntem önerip doğrulamak; (iii) bu
-üç yöntemi yalnızca analitik/CPU düzeyinde değil, gerçek bir Isaac
-Sim/Isaac Lab GPU paralel fizik simülasyonu içinde, gerçek bir SAC
-eğitimiyle karşılaştırarak, karıştırma fonksiyonu seçiminin öğrenme
-performansına yansıyıp yansımadığını göstermektir. Bu son nokta,
-çalışmanın özgün değerinin merkezindedir: karşılaştırma soyut bir sayısal
-deney olarak değil, gerçek ay zemini üzerinde, gerçek bir Isaac Sim
-eğitim döngüsü içinde gerçekleştirilmiştir.
-
-Bu çalışmanın temel katkıları şunlardır:
+Motivated by these observations, this study asks three research
+questions:
 
 \begin{itemize}
-\item Var olan smoothstep ve önceden kullanılan Gauss karıştırma
-yöntemleri, sonlu geçiş yarıçapında kesilerek (hard truncation) aynı
-geçiş bütçesi altında ilk kez adil biçimde karşılaştırılmış; kesilmemiş
-Gauss'un görünürde iyi durduğu ama gerçekte sonlu yarıçapta kesildiğinde
-ortaya çıkan gizli bir dikiş kusuru taşıdığı gösterilmiştir.
-\item Temas bölgesinde Gauss, ötesinde smoothstep ağırlıklı bir switch
-kullanan yeni bir hibrit karıştırma yöntemi önerilmiş ve bu yöntemin
-makine hassasiyetinde süreklilik sağladığı, kendi iç geçişinde yeni bir
-dikiş yaratmadığı gösterilmiştir.
-\item Otuz tohum ve dört yöntem varyantı (smoothstep, üretim öncesi
-Gauss, kalibre edilmiş Gauss, hibrit) üzerinde istatistiksel olarak
-doğrulanmış (Wilcoxon işaretli sıra testi) bir süreklilik, maliyet ve
-VRAM karşılaştırması yapılmış; dört ayrı ablasyon analiziyle (temas
-yarıçapı, switch genişliği, geçiş yarıçapı, grid çözünürlüğü)
-bulguların sağlamlığı sınanmıştır.
-\item Üç yöntem, gerçek bir Isaac Lab/Isaac Sim PhysX ortamında, GPU
-paralel SAC eğitimiyle karşılaştırılmıştır; bu, terrain-randomization
-literatüründeki çalışmaların aksine karıştırma fonksiyonu seçimini
-doğrudan bir eğitim tasarımı değişkeni olarak ele alan ilk denemedir.
-\item Bu gerçek eğitim karşılaştırması yöntem başına tek tohumla değil
-üç bağımsız tohumla ($n=3$) yapılmış; ilk tek-tohumlu ölçümde görünen
-büyük performans farkının çoklu tohumla istatistiksel olarak
-doğrulanamadığı gösterilerek, tek-koşu RL karşılaştırmalarının
-güvenilirliği konusunda somut, kendi verisine dayanan bir uyarı örneği
-sunulmuştur.
-\item Üç yöntem de üretim koduna, mevcut davranışı bozmayan (geriye
-dönük uyumlu) ve bir ortam değişkeniyle
-(ISAACLAB\_TERRAIN\_BLEND\_METHOD) seçilebilir şekilde entegre
-edilmiştir.
+\item \textbf{RQ1:} When compact-support (smoothstep) and
+infinite-support (Gaussian) blending functions are compared fairly under
+the same transition-radius budget, how large is the quantitative
+difference in boundary continuity (C0/C1), and what trade-off does this
+form with computation/memory cost?
+\item \textbf{RQ2:} Can a hybrid blending method that uses Gaussian
+blending in the landing-gear contact region and smoothstep beyond it
+combine the continuity advantages of both methods at a reasonable
+increase in computational cost?
+\item \textbf{RQ3:} Do the continuity differences among these three
+blending methods translate into a measurable learning-performance
+difference in a real Isaac Sim/Isaac Lab SAC training run?
 \end{itemize}
 
-Bu makalenin geri kalanı şu şekilde yapılandırılmıştır: \cref{sec:ilgili},
-çalışmanın konumlandığı literatürü beş tematik küme altında
-incelemektedir. \cref{sec:yontem}, deney ortamını ve tüm koşuların
-paylaştığı simülasyon kurulumunu, karıştırma fonksiyonlarının matematiksel
-tanımını, analitik değerlendirme protokolünü ve gerçek Isaac Sim eğitim
-protokolünü ayrıntılandırmaktadır. \cref{sec:bulgular}, süreklilik,
-maliyet, VRAM, ablasyon ve gerçek eğitim sonuçlarını sunmaktadır.
-\cref{sec:tartisma}, bulguları literatürle ilişkilendirerek tartışmakta ve
-sınırlamaları ele almaktadır. \cref{sec:sonuc}, çalışmayı özetlemekte ve
-somut gelecek çalışma önerileriyle sonlanmaktadır.
+Accordingly, the aim of this study is threefold: (i) to quantitatively
+compare the existing smoothstep method and the previously used Gaussian
+method within the same architecture and under the same transition
+budget; (ii) to propose and validate a hybrid method that combines the
+advantages of both; (iii) to compare these three methods not only at the
+analytic/CPU level but inside a real Isaac Sim/Isaac Lab GPU-parallel
+physics simulation with a real SAC training run, to show whether the
+choice of blending function is reflected in learning performance. This
+last point is central to the study's original contribution: the
+comparison is carried out not as an abstract numerical experiment but
+on real lunar terrain, inside a real Isaac Sim training loop.
+
+The main contributions of this study are as follows:
+
+\begin{itemize}
+\item The existing smoothstep method and the previously used Gaussian
+blending method are, for the first time, fairly compared under the same
+transition budget by truncating both to zero at a finite transition
+radius (hard truncation); it is shown that the untruncated Gaussian,
+which appears to behave well, in fact carries a hidden seam defect that
+emerges once it is truncated at a finite radius.
+\item A new hybrid blending method is proposed that uses a Gaussian
+weighted toward the contact region and a smoothstep weighted beyond it,
+and this method is shown to provide machine-precision continuity without
+creating a new seam at its own internal transition.
+\item A statistically validated (Wilcoxon signed-rank test) comparison of
+continuity, cost, and VRAM is carried out over thirty seeds and four
+method variants (smoothstep, as-shipped Gaussian, calibrated Gaussian,
+hybrid); the robustness of the findings is tested with four separate
+ablation analyses (contact radius, switch width, transition radius, grid
+resolution).
+\item The three methods are compared inside a real Isaac Lab/Isaac Sim
+PhysX environment with GPU-parallel SAC training; unlike prior work in
+the terrain-randomization literature, this is, to our knowledge, the
+first attempt to treat the choice of blending function directly as a
+training-design variable.
+\item This real-training comparison is carried out not with a single
+seed per method but with three independent seeds ($n=3$); it is shown
+that the large performance gap apparent in the initial single-seed
+measurement could not be statistically confirmed with multiple seeds,
+providing a concrete, self-contained cautionary example about the
+reliability of single-run RL comparisons.
+\item All three methods are integrated into the production code in a
+backward-compatible way that does not change existing behavior, and are
+selectable via an environment variable
+(\texttt{ISAACLAB\_TERRAIN\_BLEND\_METHOD}).
+\end{itemize}
+
+The remainder of this paper is organized as follows. \cref{sec:ilgili}
+reviews the literature in which this study is positioned, under five
+thematic clusters. \cref{sec:yontem} details the experimental
+environment and the simulation setup shared by all conditions, the
+mathematical definition of the blending functions, the analytic
+evaluation protocol, and the real Isaac Sim training protocol.
+\cref{sec:bulgular} presents the continuity, cost, VRAM, ablation, and
+real-training results. \cref{sec:tartisma} discusses the findings in
+relation to the literature and addresses limitations.
+\cref{sec:sonuc} summarizes the study and concludes with concrete
+directions for future work.
