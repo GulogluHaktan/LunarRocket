@@ -1,0 +1,711 @@
+#usda 1.0
+(
+    customLayerData = {
+        string creator = "MuJoCo USD Converter v0.2.0"
+    }
+    defaultPrim = "vtvl_hopper_lunar"
+    doc = """Generated from Composed Stage of root layer /tmp/tmpr5z7v6xl/vtvl_hopper_lunar.usdc
+
+
+Generated from Composed Stage of root layer /tmp/mjcf_import_hopper_lunar_eninvv8n/usdex_hopper_lunar/vtvl_hopper_lunar.usdc
+"""
+    kilogramsPerUnit = 1
+    metersPerUnit = 1
+    upAxis = "Z"
+)
+
+over "Flattened_Prototype_5"
+{
+    def Shader "PreviewSurface"
+    {
+        uniform token info:id = "UsdPreviewSurface"
+        color3f inputs:diffuseColor.connect = </Flattened_Prototype_5.inputs:diffuseColor>
+        float inputs:metallic.connect = </Flattened_Prototype_5.inputs:metallic>
+        float inputs:opacity.connect = </Flattened_Prototype_5.inputs:opacity>
+        float inputs:roughness.connect = </Flattened_Prototype_5.inputs:roughness>
+        token outputs:displacement
+        token outputs:surface
+    }
+}
+
+over "Flattened_Prototype_6"
+{
+    def Shader "PreviewSurface"
+    {
+        uniform token info:id = "UsdPreviewSurface"
+        color3f inputs:diffuseColor.connect = </Flattened_Prototype_6.inputs:diffuseColor>
+        float inputs:metallic.connect = </Flattened_Prototype_6.inputs:metallic>
+        float inputs:opacity.connect = </Flattened_Prototype_6.inputs:opacity>
+        float inputs:roughness.connect = </Flattened_Prototype_6.inputs:roughness>
+        token outputs:displacement
+        token outputs:surface
+    }
+}
+
+over "Flattened_Prototype_7"
+{
+    def Shader "PreviewSurface"
+    {
+        uniform token info:id = "UsdPreviewSurface"
+        color3f inputs:diffuseColor.connect = </Flattened_Prototype_7.inputs:diffuseColor>
+        float inputs:metallic.connect = </Flattened_Prototype_7.inputs:metallic>
+        float inputs:opacity.connect = </Flattened_Prototype_7.inputs:opacity>
+        float inputs:roughness.connect = </Flattened_Prototype_7.inputs:roughness>
+        token outputs:displacement
+        token outputs:surface
+    }
+}
+
+over "Flattened_Prototype_8"
+{
+    def Shader "PreviewSurface"
+    {
+        uniform token info:id = "UsdPreviewSurface"
+        color3f inputs:diffuseColor.connect = </Flattened_Prototype_8.inputs:diffuseColor>
+        float inputs:metallic.connect = </Flattened_Prototype_8.inputs:metallic>
+        float inputs:opacity.connect = </Flattened_Prototype_8.inputs:opacity>
+        float inputs:roughness.connect = </Flattened_Prototype_8.inputs:roughness>
+        token outputs:displacement
+        token outputs:surface
+    }
+}
+
+over "Flattened_Prototype_1"
+{
+    def Shader "PreviewSurface"
+    {
+        uniform token info:id = "UsdPreviewSurface"
+        color3f inputs:diffuseColor.connect = </Flattened_Prototype_1.inputs:diffuseColor>
+        float inputs:metallic.connect = </Flattened_Prototype_1.inputs:metallic>
+        float inputs:opacity.connect = </Flattened_Prototype_1.inputs:opacity>
+        float inputs:roughness.connect = </Flattened_Prototype_1.inputs:roughness>
+        token outputs:displacement
+        token outputs:surface
+    }
+}
+
+over "Flattened_Prototype_2"
+{
+    def Shader "PreviewSurface"
+    {
+        uniform token info:id = "UsdPreviewSurface"
+        color3f inputs:diffuseColor.connect = </Flattened_Prototype_2.inputs:diffuseColor>
+        float inputs:metallic.connect = </Flattened_Prototype_2.inputs:metallic>
+        float inputs:opacity.connect = </Flattened_Prototype_2.inputs:opacity>
+        float inputs:roughness.connect = </Flattened_Prototype_2.inputs:roughness>
+        token outputs:displacement
+        token outputs:surface
+    }
+}
+
+over "Flattened_Prototype_3"
+{
+    def Shader "PreviewSurface"
+    {
+        uniform token info:id = "UsdPreviewSurface"
+        color3f inputs:diffuseColor.connect = </Flattened_Prototype_3.inputs:diffuseColor>
+        float inputs:metallic.connect = </Flattened_Prototype_3.inputs:metallic>
+        float inputs:opacity.connect = </Flattened_Prototype_3.inputs:opacity>
+        float inputs:roughness.connect = </Flattened_Prototype_3.inputs:roughness>
+        token outputs:displacement
+        token outputs:surface
+    }
+}
+
+over "Flattened_Prototype_4"
+{
+    def Shader "PreviewSurface"
+    {
+        uniform token info:id = "UsdPreviewSurface"
+        color3f inputs:diffuseColor.connect = </Flattened_Prototype_4.inputs:diffuseColor>
+        float inputs:metallic.connect = </Flattened_Prototype_4.inputs:metallic>
+        float inputs:opacity.connect = </Flattened_Prototype_4.inputs:opacity>
+        float inputs:roughness.connect = </Flattened_Prototype_4.inputs:roughness>
+        token outputs:displacement
+        token outputs:surface
+    }
+}
+
+def Xform "vtvl_hopper_lunar" (
+    apiSchemas = ["GeomModelAPI", "IsaacRobotAPI"]
+    assetInfo = {
+        string name = "vtvl_hopper_lunar"
+    }
+    kind = "component"
+)
+{
+    float3[] extentsHint = [(-0.425, -0.425, -0.025), (0.425, 0.425, 0.8), (3.4028235e38, 3.4028235e38, 3.4028235e38), (-3.4028235e38, -3.4028235e38, -3.4028235e38), (3.4028235e38, 3.4028235e38, 3.4028235e38), (-3.4028235e38, -3.4028235e38, -3.4028235e38), (-0.415, -0.415, -0.015), (0.415, 0.415, 0.375)]
+    rel isaac:physics:robotJoints = [
+        </vtvl_hopper_lunar/Geometry/hopper/tvc_yaw/tvc_yaw_joint>,
+        </vtvl_hopper_lunar/Geometry/hopper/tvc_yaw/tvc_pitch/tvc_pitch_joint>,
+    ]
+    rel isaac:physics:robotLinks = [
+        </vtvl_hopper_lunar/Geometry/hopper>,
+        </vtvl_hopper_lunar/Geometry/hopper/tvc_yaw>,
+        </vtvl_hopper_lunar/Geometry/hopper/tvc_yaw/tvc_pitch>,
+    ]
+    token isaac:robotType = "Default"
+
+    def Scope "Geometry"
+    {
+        def Xform "hopper" (
+            apiSchemas = ["PhysicsRigidBodyAPI", "PhysicsMassAPI", "PhysicsArticulationRootAPI", "NewtonArticulationRootAPI", "IsaacLinkAPI"]
+        )
+        {
+            bool newton:selfCollisionEnabled = 0
+            point3f physics:centerOfMass = (0, 0, 0)
+            float3 physics:diagonalInertia = (0.025, 0.025, 0.008)
+            float physics:mass = 1.63
+            quatf physics:principalAxes = (1, 0, 0, 0)
+            quatf xformOp:orient = (1, 0, 0, 0)
+            float3 xformOp:scale = (1, 1, 1)
+            double3 xformOp:translate = (0, 0, 0.355)
+            uniform token[] xformOpOrder = ["xformOp:translate", "xformOp:orient", "xformOp:scale"]
+
+            def Cylinder "main_body" (
+                apiSchemas = ["PhysicsCollisionAPI", "NewtonCollisionAPI", "MjcCollisionAPI", "PhysicsMassAPI", "MaterialBindingAPI"]
+            )
+            {
+                uniform token axis = "Z"
+                float3[] extent = [(-0.06, -0.06, -0.2975), (0.06, 0.06, 0.2975)]
+                double height = 0.595
+                rel material:binding = </vtvl_hopper_lunar/Materials/body_mat>
+                rel material:binding:physics = </vtvl_hopper_lunar/Physics/PhysicsMaterial>
+                float newton:contactGap = 0
+                float physics:density = 1000
+                color3f[] primvars:displayColor = [(0.5, 0.5, 0.5)] (
+                    interpolation = "constant"
+                )
+                int[] primvars:displayColor:indices = None
+                float[] primvars:displayOpacity = [1] (
+                    interpolation = "constant"
+                )
+                int[] primvars:displayOpacity:indices = None
+                double radius = 0.06
+                quatf xformOp:orient = (6.123234e-17, 1, 0, 0)
+                float3 xformOp:scale = (1, 1, 1)
+                double3 xformOp:translate = (0, 0, 0.14750000000000002)
+                uniform token[] xformOpOrder = ["xformOp:translate", "xformOp:orient", "xformOp:scale"]
+            }
+
+            def Capsule "leg1" (
+                apiSchemas = ["PhysicsCollisionAPI", "NewtonCollisionAPI", "MjcCollisionAPI", "PhysicsMassAPI", "MaterialBindingAPI"]
+            )
+            {
+                uniform token axis = "Z"
+                float3[] extent = [(-0.012, -0.012, -0.27775365), (0.012, 0.012, 0.27775365)]
+                double height = 0.5315072906367325
+                rel material:binding = </vtvl_hopper_lunar/Materials/leg_mat>
+                rel material:binding:physics = </vtvl_hopper_lunar/Physics/PhysicsMaterial>
+                float newton:contactGap = 0
+                bool physics:collisionEnabled = 0
+                float physics:density = 1000
+                color3f[] primvars:displayColor = [(0.5, 0.5, 0.5)] (
+                    interpolation = "constant"
+                )
+                int[] primvars:displayColor:indices = None
+                float[] primvars:displayOpacity = [1] (
+                    interpolation = "constant"
+                )
+                int[] primvars:displayOpacity:indices = None
+                double radius = 0.012
+                quatf xformOp:orient = (0.4132163, 0, 0.9106329, 0)
+                float3 xformOp:scale = (1, 1, 1)
+                double3 xformOp:translate = (0.2, 0, -0.18)
+                uniform token[] xformOpOrder = ["xformOp:translate", "xformOp:orient", "xformOp:scale"]
+            }
+
+            def Sphere "foot1_geom" (
+                apiSchemas = ["PhysicsCollisionAPI", "NewtonCollisionAPI", "MjcCollisionAPI", "PhysicsMassAPI", "MaterialBindingAPI"]
+            )
+            {
+                float3[] extent = [(-0.025, -0.025, -0.025), (0.025, 0.025, 0.025)]
+                rel material:binding = </vtvl_hopper_lunar/Materials/foot_mat>
+                rel material:binding:physics = </vtvl_hopper_lunar/Physics/PhysicsMaterial>
+                float newton:contactGap = 0
+                float physics:density = 1000
+                color3f[] primvars:displayColor = [(0.5, 0.5, 0.5)] (
+                    interpolation = "constant"
+                )
+                int[] primvars:displayColor:indices = None
+                float[] primvars:displayOpacity = [1] (
+                    interpolation = "constant"
+                )
+                int[] primvars:displayOpacity:indices = None
+                double radius = 0.025
+                quatf xformOp:orient = (1, 0, 0, 0)
+                float3 xformOp:scale = (1, 1, 1)
+                double3 xformOp:translate = (0.4, 0, -0.355)
+                uniform token[] xformOpOrder = ["xformOp:translate", "xformOp:orient", "xformOp:scale"]
+            }
+
+            def Capsule "leg2" (
+                apiSchemas = ["PhysicsCollisionAPI", "NewtonCollisionAPI", "MjcCollisionAPI", "PhysicsMassAPI", "MaterialBindingAPI"]
+            )
+            {
+                uniform token axis = "Z"
+                float3[] extent = [(-0.012, -0.012, -0.27775365), (0.012, 0.012, 0.27775365)]
+                double height = 0.5315072906367325
+                rel material:binding = </vtvl_hopper_lunar/Materials/leg_mat>
+                rel material:binding:physics = </vtvl_hopper_lunar/Physics/PhysicsMaterial>
+                float newton:contactGap = 0
+                bool physics:collisionEnabled = 0
+                float physics:density = 1000
+                color3f[] primvars:displayColor = [(0.5, 0.5, 0.5)] (
+                    interpolation = "constant"
+                )
+                int[] primvars:displayColor:indices = None
+                float[] primvars:displayOpacity = [1] (
+                    interpolation = "constant"
+                )
+                int[] primvars:displayOpacity:indices = None
+                double radius = 0.012
+                quatf xformOp:orient = (-0.4132163, 0, 0.9106329, 0)
+                float3 xformOp:scale = (1, 1, 1)
+                double3 xformOp:translate = (-0.2, 0, -0.18)
+                uniform token[] xformOpOrder = ["xformOp:translate", "xformOp:orient", "xformOp:scale"]
+            }
+
+            def Sphere "foot2_geom" (
+                apiSchemas = ["PhysicsCollisionAPI", "NewtonCollisionAPI", "MjcCollisionAPI", "PhysicsMassAPI", "MaterialBindingAPI"]
+            )
+            {
+                float3[] extent = [(-0.025, -0.025, -0.025), (0.025, 0.025, 0.025)]
+                rel material:binding = </vtvl_hopper_lunar/Materials/foot_mat>
+                rel material:binding:physics = </vtvl_hopper_lunar/Physics/PhysicsMaterial>
+                float newton:contactGap = 0
+                float physics:density = 1000
+                color3f[] primvars:displayColor = [(0.5, 0.5, 0.5)] (
+                    interpolation = "constant"
+                )
+                int[] primvars:displayColor:indices = None
+                float[] primvars:displayOpacity = [1] (
+                    interpolation = "constant"
+                )
+                int[] primvars:displayOpacity:indices = None
+                double radius = 0.025
+                quatf xformOp:orient = (1, 0, 0, 0)
+                float3 xformOp:scale = (1, 1, 1)
+                double3 xformOp:translate = (-0.4, 0, -0.355)
+                uniform token[] xformOpOrder = ["xformOp:translate", "xformOp:orient", "xformOp:scale"]
+            }
+
+            def Capsule "leg3" (
+                apiSchemas = ["PhysicsCollisionAPI", "NewtonCollisionAPI", "MjcCollisionAPI", "PhysicsMassAPI", "MaterialBindingAPI"]
+            )
+            {
+                uniform token axis = "Z"
+                float3[] extent = [(-0.012, -0.012, -0.27775365), (0.012, 0.012, 0.27775365)]
+                double height = 0.5315072906367325
+                rel material:binding = </vtvl_hopper_lunar/Materials/leg_mat>
+                rel material:binding:physics = </vtvl_hopper_lunar/Physics/PhysicsMaterial>
+                float newton:contactGap = 0
+                bool physics:collisionEnabled = 0
+                float physics:density = 1000
+                color3f[] primvars:displayColor = [(0.5, 0.5, 0.5)] (
+                    interpolation = "constant"
+                )
+                int[] primvars:displayColor:indices = None
+                float[] primvars:displayOpacity = [1] (
+                    interpolation = "constant"
+                )
+                int[] primvars:displayOpacity:indices = None
+                double radius = 0.012
+                quatf xformOp:orient = (-0.4132163, 0.9106329, 0, 0)
+                float3 xformOp:scale = (1, 1, 1)
+                double3 xformOp:translate = (0, 0.2, -0.18)
+                uniform token[] xformOpOrder = ["xformOp:translate", "xformOp:orient", "xformOp:scale"]
+            }
+
+            def Sphere "foot3_geom" (
+                apiSchemas = ["PhysicsCollisionAPI", "NewtonCollisionAPI", "MjcCollisionAPI", "PhysicsMassAPI", "MaterialBindingAPI"]
+            )
+            {
+                float3[] extent = [(-0.025, -0.025, -0.025), (0.025, 0.025, 0.025)]
+                rel material:binding = </vtvl_hopper_lunar/Materials/foot_mat>
+                rel material:binding:physics = </vtvl_hopper_lunar/Physics/PhysicsMaterial>
+                float newton:contactGap = 0
+                float physics:density = 1000
+                color3f[] primvars:displayColor = [(0.5, 0.5, 0.5)] (
+                    interpolation = "constant"
+                )
+                int[] primvars:displayColor:indices = None
+                float[] primvars:displayOpacity = [1] (
+                    interpolation = "constant"
+                )
+                int[] primvars:displayOpacity:indices = None
+                double radius = 0.025
+                quatf xformOp:orient = (1, 0, 0, 0)
+                float3 xformOp:scale = (1, 1, 1)
+                double3 xformOp:translate = (0, 0.4, -0.355)
+                uniform token[] xformOpOrder = ["xformOp:translate", "xformOp:orient", "xformOp:scale"]
+            }
+
+            def Capsule "leg4" (
+                apiSchemas = ["PhysicsCollisionAPI", "NewtonCollisionAPI", "MjcCollisionAPI", "PhysicsMassAPI", "MaterialBindingAPI"]
+            )
+            {
+                uniform token axis = "Z"
+                float3[] extent = [(-0.012, -0.012, -0.27775365), (0.012, 0.012, 0.27775365)]
+                double height = 0.5315072906367325
+                rel material:binding = </vtvl_hopper_lunar/Materials/leg_mat>
+                rel material:binding:physics = </vtvl_hopper_lunar/Physics/PhysicsMaterial>
+                float newton:contactGap = 0
+                bool physics:collisionEnabled = 0
+                float physics:density = 1000
+                color3f[] primvars:displayColor = [(0.5, 0.5, 0.5)] (
+                    interpolation = "constant"
+                )
+                int[] primvars:displayColor:indices = None
+                float[] primvars:displayOpacity = [1] (
+                    interpolation = "constant"
+                )
+                int[] primvars:displayOpacity:indices = None
+                double radius = 0.012
+                quatf xformOp:orient = (0.4132163, 0.9106329, 0, 0)
+                float3 xformOp:scale = (1, 1, 1)
+                double3 xformOp:translate = (0, -0.2, -0.18)
+                uniform token[] xformOpOrder = ["xformOp:translate", "xformOp:orient", "xformOp:scale"]
+            }
+
+            def Sphere "foot4_geom" (
+                apiSchemas = ["PhysicsCollisionAPI", "NewtonCollisionAPI", "MjcCollisionAPI", "PhysicsMassAPI", "MaterialBindingAPI"]
+            )
+            {
+                float3[] extent = [(-0.025, -0.025, -0.025), (0.025, 0.025, 0.025)]
+                rel material:binding = </vtvl_hopper_lunar/Materials/foot_mat>
+                rel material:binding:physics = </vtvl_hopper_lunar/Physics/PhysicsMaterial>
+                float newton:contactGap = 0
+                float physics:density = 1000
+                color3f[] primvars:displayColor = [(0.5, 0.5, 0.5)] (
+                    interpolation = "constant"
+                )
+                int[] primvars:displayColor:indices = None
+                float[] primvars:displayOpacity = [1] (
+                    interpolation = "constant"
+                )
+                int[] primvars:displayOpacity:indices = None
+                double radius = 0.025
+                quatf xformOp:orient = (1, 0, 0, 0)
+                float3 xformOp:scale = (1, 1, 1)
+                double3 xformOp:translate = (0, -0.4, -0.355)
+                uniform token[] xformOpOrder = ["xformOp:translate", "xformOp:orient", "xformOp:scale"]
+            }
+
+            def Sphere "COM" (
+                apiSchemas = ["MjcSiteAPI"]
+            )
+            {
+                float3[] extent = [(-0.02, -0.02, -0.02), (0.02, 0.02, 0.02)]
+                color3f[] primvars:displayColor = [(1, 0, 0)] (
+                    interpolation = "constant"
+                )
+                int[] primvars:displayColor:indices = None
+                float[] primvars:displayOpacity = [1] (
+                    interpolation = "constant"
+                )
+                int[] primvars:displayOpacity:indices = None
+                uniform token purpose = "guide"
+                double radius = 0.02
+                quatf xformOp:orient = (1, 0, 0, 0)
+                float3 xformOp:scale = (1, 1, 1)
+                double3 xformOp:translate = (0, 0, 0)
+                uniform token[] xformOpOrder = ["xformOp:translate", "xformOp:orient", "xformOp:scale"]
+            }
+
+            def Sphere "foot1" (
+                apiSchemas = ["MjcSiteAPI"]
+            )
+            {
+                float3[] extent = [(-0.015, -0.015, -0.015), (0.015, 0.015, 0.015)]
+                color3f[] primvars:displayColor = [(1, 0, 0)] (
+                    interpolation = "constant"
+                )
+                int[] primvars:displayColor:indices = None
+                float[] primvars:displayOpacity = [1] (
+                    interpolation = "constant"
+                )
+                int[] primvars:displayOpacity:indices = None
+                uniform token purpose = "guide"
+                double radius = 0.015
+                quatf xformOp:orient = (1, 0, 0, 0)
+                float3 xformOp:scale = (1, 1, 1)
+                double3 xformOp:translate = (0.4, 0, -0.355)
+                uniform token[] xformOpOrder = ["xformOp:translate", "xformOp:orient", "xformOp:scale"]
+            }
+
+            def Sphere "foot2" (
+                apiSchemas = ["MjcSiteAPI"]
+            )
+            {
+                float3[] extent = [(-0.015, -0.015, -0.015), (0.015, 0.015, 0.015)]
+                color3f[] primvars:displayColor = [(0, 1, 0)] (
+                    interpolation = "constant"
+                )
+                int[] primvars:displayColor:indices = None
+                float[] primvars:displayOpacity = [1] (
+                    interpolation = "constant"
+                )
+                int[] primvars:displayOpacity:indices = None
+                uniform token purpose = "guide"
+                double radius = 0.015
+                quatf xformOp:orient = (1, 0, 0, 0)
+                float3 xformOp:scale = (1, 1, 1)
+                double3 xformOp:translate = (-0.4, 0, -0.355)
+                uniform token[] xformOpOrder = ["xformOp:translate", "xformOp:orient", "xformOp:scale"]
+            }
+
+            def Sphere "foot3" (
+                apiSchemas = ["MjcSiteAPI"]
+            )
+            {
+                float3[] extent = [(-0.015, -0.015, -0.015), (0.015, 0.015, 0.015)]
+                color3f[] primvars:displayColor = [(0, 0, 1)] (
+                    interpolation = "constant"
+                )
+                int[] primvars:displayColor:indices = None
+                float[] primvars:displayOpacity = [1] (
+                    interpolation = "constant"
+                )
+                int[] primvars:displayOpacity:indices = None
+                uniform token purpose = "guide"
+                double radius = 0.015
+                quatf xformOp:orient = (1, 0, 0, 0)
+                float3 xformOp:scale = (1, 1, 1)
+                double3 xformOp:translate = (0, 0.4, -0.355)
+                uniform token[] xformOpOrder = ["xformOp:translate", "xformOp:orient", "xformOp:scale"]
+            }
+
+            def Sphere "foot4" (
+                apiSchemas = ["MjcSiteAPI"]
+            )
+            {
+                float3[] extent = [(-0.015, -0.015, -0.015), (0.015, 0.015, 0.015)]
+                color3f[] primvars:displayColor = [(1, 1, 0)] (
+                    interpolation = "constant"
+                )
+                int[] primvars:displayColor:indices = None
+                float[] primvars:displayOpacity = [1] (
+                    interpolation = "constant"
+                )
+                int[] primvars:displayOpacity:indices = None
+                uniform token purpose = "guide"
+                double radius = 0.015
+                quatf xformOp:orient = (1, 0, 0, 0)
+                float3 xformOp:scale = (1, 1, 1)
+                double3 xformOp:translate = (0, -0.4, -0.355)
+                uniform token[] xformOpOrder = ["xformOp:translate", "xformOp:orient", "xformOp:scale"]
+            }
+
+            def Xform "tvc_yaw" (
+                apiSchemas = ["PhysicsRigidBodyAPI", "PhysicsMassAPI", "IsaacLinkAPI"]
+            )
+            {
+                point3f physics:centerOfMass = (0, 0, 0)
+                float3 physics:diagonalInertia = (0.001, 0.001, 0.001)
+                float physics:mass = 0.01
+                quatf physics:principalAxes = (1, 0, 0, 0)
+                quatf xformOp:orient = (1, 0, 0, 0)
+                float3 xformOp:scale = (1, 1, 1)
+                double3 xformOp:translate = (0, 0, -0.15)
+                uniform token[] xformOpOrder = ["xformOp:translate", "xformOp:orient", "xformOp:scale"]
+
+                def Xform "tvc_pitch" (
+                    apiSchemas = ["PhysicsRigidBodyAPI", "PhysicsMassAPI", "IsaacLinkAPI"]
+                )
+                {
+                    point3f physics:centerOfMass = (0, 0, 0)
+                    float3 physics:diagonalInertia = (0.0002, 0.0002, 0.0002)
+                    float physics:mass = 0.02
+                    quatf physics:principalAxes = (1, 0, 0, 0)
+                    quatf xformOp:orient = (1, 0, 0, 0)
+                    float3 xformOp:scale = (1, 1, 1)
+                    double3 xformOp:translate = (0, 0, 0)
+                    uniform token[] xformOpOrder = ["xformOp:translate", "xformOp:orient", "xformOp:scale"]
+
+                    def Cylinder "engine" (
+                        apiSchemas = ["PhysicsCollisionAPI", "NewtonCollisionAPI", "MjcCollisionAPI", "PhysicsMassAPI", "MaterialBindingAPI"]
+                    )
+                    {
+                        uniform token axis = "Z"
+                        float3[] extent = [(-0.04, -0.04, -0.02), (0.04, 0.04, 0.02)]
+                        double height = 0.04
+                        rel material:binding = </vtvl_hopper_lunar/Materials/engine_mat>
+                        rel material:binding:physics = </vtvl_hopper_lunar/Physics/PhysicsMaterial>
+                        float newton:contactGap = 0
+                        bool physics:collisionEnabled = 0
+                        float physics:density = 1000
+                        color3f[] primvars:displayColor = [(0.5, 0.5, 0.5)] (
+                            interpolation = "constant"
+                        )
+                        int[] primvars:displayColor:indices = None
+                        float[] primvars:displayOpacity = [1] (
+                            interpolation = "constant"
+                        )
+                        int[] primvars:displayOpacity:indices = None
+                        double radius = 0.04
+                        quatf xformOp:orient = (1, 0, 0, 0)
+                        float3 xformOp:scale = (1, 1, 1)
+                        double3 xformOp:translate = (0, 0, -0.025)
+                        uniform token[] xformOpOrder = ["xformOp:translate", "xformOp:orient", "xformOp:scale"]
+                    }
+
+                    def Sphere "thrust_site" (
+                        apiSchemas = ["MjcSiteAPI"]
+                    )
+                    {
+                        float3[] extent = [(-0.02, -0.02, -0.02), (0.02, 0.02, 0.02)]
+                        color3f[] primvars:displayColor = [(1, 0.5, 0)] (
+                            interpolation = "constant"
+                        )
+                        int[] primvars:displayColor:indices = None
+                        float[] primvars:displayOpacity = [1] (
+                            interpolation = "constant"
+                        )
+                        int[] primvars:displayOpacity:indices = None
+                        uniform token purpose = "guide"
+                        double radius = 0.02
+                        quatf xformOp:orient = (1, 0, 0, 0)
+                        float3 xformOp:scale = (1, 1, 1)
+                        double3 xformOp:translate = (0, 0, -0.1)
+                        uniform token[] xformOpOrder = ["xformOp:translate", "xformOp:orient", "xformOp:scale"]
+                    }
+
+                    def PhysicsRevoluteJoint "tvc_pitch_joint" (
+                        apiSchemas = ["MjcJointAPI", "PhysxJointAPI", "PhysicsDriveAPI:angular", "PhysicsJointStateAPI:angular", "IsaacJointAPI"]
+                    )
+                    {
+                        float drive:angular:physics:maxForce = 2.5
+                        uniform double mjc:armature = 0.002
+                        uniform double mjc:damping = 0.1
+                        uniform double mjc:frictionloss = 0.005
+                        uniform token physics:axis = "Y"
+                        rel physics:body0 = </vtvl_hopper_lunar/Geometry/hopper/tvc_yaw>
+                        rel physics:body1 = </vtvl_hopper_lunar/Geometry/hopper/tvc_yaw/tvc_pitch>
+                        point3f physics:localPos0 = (0, 0, 0)
+                        point3f physics:localPos1 = (0, 0, 0)
+                        quatf physics:localRot0 = (1, 0, 0, 0)
+                        quatf physics:localRot1 = (1, 0, 0, 0)
+                        float physics:lowerLimit = -25
+                        float physics:upperLimit = 25
+                        float physxJoint:armature = 0.002
+                        float physxJoint:jointFriction = 0.005
+                    }
+                }
+
+                def PhysicsRevoluteJoint "tvc_yaw_joint" (
+                    apiSchemas = ["MjcJointAPI", "PhysxJointAPI", "PhysicsDriveAPI:angular", "PhysicsJointStateAPI:angular", "IsaacJointAPI"]
+                )
+                {
+                    float drive:angular:physics:maxForce = 2.5
+                    uniform double mjc:armature = 0.002
+                    uniform double mjc:damping = 0.1
+                    uniform double mjc:frictionloss = 0.005
+                    uniform token physics:axis = "X"
+                    rel physics:body0 = </vtvl_hopper_lunar/Geometry/hopper>
+                    rel physics:body1 = </vtvl_hopper_lunar/Geometry/hopper/tvc_yaw>
+                    point3f physics:localPos0 = (0, 0, -0.15)
+                    point3f physics:localPos1 = (0, 0, 0)
+                    quatf physics:localRot0 = (1, 0, 0, 0)
+                    quatf physics:localRot1 = (1, 0, 0, 0)
+                    float physics:lowerLimit = -25
+                    float physics:upperLimit = 25
+                    float physxJoint:armature = 0.002
+                    float physxJoint:jointFriction = 0.005
+                }
+            }
+        }
+    }
+
+    def Scope "Materials"
+    {
+        def Material "body_mat" (
+            instanceable = true
+            add references = </Flattened_Prototype_7>
+        )
+        {
+            color3f inputs:diffuseColor = (0.44798842, 0.44798842, 0.44798842)
+            float inputs:metallic = 0
+            float inputs:opacity = 1
+            float inputs:roughness = 0.5
+            token outputs:displacement.connect = </vtvl_hopper_lunar/Materials/body_mat/PreviewSurface.outputs:displacement>
+            token outputs:surface.connect = </vtvl_hopper_lunar/Materials/body_mat/PreviewSurface.outputs:surface>
+        }
+
+        def Material "leg_mat" (
+            instanceable = true
+            add references = </Flattened_Prototype_5>
+        )
+        {
+            color3f inputs:diffuseColor = (0.033104762, 0.033104762, 0.033104762)
+            float inputs:metallic = 0
+            float inputs:opacity = 1
+            float inputs:roughness = 0.5
+            token outputs:displacement.connect = </vtvl_hopper_lunar/Materials/leg_mat/PreviewSurface.outputs:displacement>
+            token outputs:surface.connect = </vtvl_hopper_lunar/Materials/leg_mat/PreviewSurface.outputs:surface>
+        }
+
+        def Material "foot_mat" (
+            instanceable = true
+            add references = </Flattened_Prototype_8>
+        )
+        {
+            color3f inputs:diffuseColor = (0.78741235, 0.78741235, 0.033104762)
+            float inputs:metallic = 0
+            float inputs:opacity = 1
+            float inputs:roughness = 0.5
+            token outputs:displacement.connect = </vtvl_hopper_lunar/Materials/foot_mat/PreviewSurface.outputs:displacement>
+            token outputs:surface.connect = </vtvl_hopper_lunar/Materials/foot_mat/PreviewSurface.outputs:surface>
+        }
+
+        def Material "engine_mat" (
+            instanceable = true
+            add references = </Flattened_Prototype_6>
+        )
+        {
+            color3f inputs:diffuseColor = (0.6038274, 0.033104762, 0.033104762)
+            float inputs:metallic = 0
+            float inputs:opacity = 1
+            float inputs:roughness = 0.5
+            token outputs:displacement.connect = </vtvl_hopper_lunar/Materials/engine_mat/PreviewSurface.outputs:displacement>
+            token outputs:surface.connect = </vtvl_hopper_lunar/Materials/engine_mat/PreviewSurface.outputs:surface>
+        }
+    }
+
+    def Scope "Physics"
+    {
+        def Material "PhysicsMaterial" (
+            apiSchemas = ["PhysicsMaterialAPI", "NewtonMaterialAPI", "MjcMaterialAPI"]
+        )
+        {
+            float newton:rollingFriction = 0.0001
+            float newton:torsionalFriction = 0.005
+            float physics:dynamicFriction = 1
+        }
+
+        def MjcActuator "tvc_yaw_servo"
+        {
+            uniform double[] mjc:biasPrm = [0, -10, 0, 0, 0, 0, 0, 0, 0, 0]
+            uniform token mjc:biasType = "affine"
+            uniform double mjc:ctrlRange:max = 25
+            uniform double mjc:ctrlRange:min = -25
+            uniform double mjc:forceRange:max = 2.5
+            uniform double mjc:forceRange:min = -2.5
+            uniform double[] mjc:gainPrm = [10, 0, 0, 0, 0, 0, 0, 0, 0, 0]
+            rel mjc:target = </vtvl_hopper_lunar/Geometry/hopper/tvc_yaw/tvc_yaw_joint>
+        }
+
+        def MjcActuator "tvc_pitch_servo"
+        {
+            uniform double[] mjc:biasPrm = [0, -10, 0, 0, 0, 0, 0, 0, 0, 0]
+            uniform token mjc:biasType = "affine"
+            uniform double mjc:ctrlRange:max = 25
+            uniform double mjc:ctrlRange:min = -25
+            uniform double mjc:forceRange:max = 2.5
+            uniform double mjc:forceRange:min = -2.5
+            uniform double[] mjc:gainPrm = [10, 0, 0, 0, 0, 0, 0, 0, 0, 0]
+            rel mjc:target = </vtvl_hopper_lunar/Geometry/hopper/tvc_yaw/tvc_pitch/tvc_pitch_joint>
+        }
+    }
+}
+
