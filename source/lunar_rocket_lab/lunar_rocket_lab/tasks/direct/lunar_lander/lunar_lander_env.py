@@ -176,15 +176,16 @@ class LunarLanderEnv(DirectRLEnv):
         )
         self._episode_reward_sums = {
             name: torch.zeros(self.num_envs, device=self.device)
+            # One key per whiteboard reward term (see _get_rewards).
             for name in (
-                "xy_progress",
-                "altitude_progress",
-                "stability",
+                "proximity",
+                "tilt",
+                "foot_load",
+                "throttle",
+                "altitude",
+                "tvc",
+                "rel_xy",
                 "velocity",
-                "guidance",
-                "control",
-                "terrain",
-                "time",
                 "terminal",
                 "total",
             )
@@ -220,6 +221,16 @@ class LunarLanderEnv(DirectRLEnv):
             rocket_cfg.spawn = rocket_cfg.spawn.copy()
             rocket_cfg.spawn.spawn_path = "/World/envs/env_0/Rocket"
         self._rocket = Articulation(rocket_cfg)
+        self._contact_sensor = None
+        if self.cfg.contact_sensor_enabled:
+            from isaaclab.sensors import ContactSensor, ContactSensorCfg
+
+            # Body-level only (Isaac Lab limitation) and the four feet are geoms
+            # on "hopper", so this is one aggregate vehicle contact force.
+            self._contact_sensor = ContactSensor(
+                ContactSensorCfg(prim_path="/World/envs/env_.*/Rocket/.*hopper.*")
+            )
+            self.scene.sensors["rocket_contact"] = self._contact_sensor
         legacy_terrain_ready = self._setup_legacy_terrain()
         if not legacy_terrain_ready:
             spawn_ground_plane(
@@ -424,86 +435,78 @@ class LunarLanderEnv(DirectRLEnv):
 
         delta_xy = self._target_pos_w[:, :2] - pos[:, :2]
         distance_xy = torch.linalg.norm(delta_xy, dim=-1)
-        xy_progress = self._previous_distance_xy - distance_xy
+        # Kept up to date for _reset_idx's bookkeeping even though the
+        # whiteboard reward is absolute-state based, not progress based.
         self._previous_distance_xy = distance_xy.detach()
 
         foot_clearances = self._foot_clearances(pos, quat)
         altitude = torch.clamp(torch.amin(foot_clearances, dim=-1), min=0.0)
-        foot_clearance_spread = torch.amax(foot_clearances, dim=-1) - torch.amin(
-            foot_clearances, dim=-1
-        )
-        altitude_progress = self._previous_altitude - altitude
         self._previous_altitude = altitude.detach()
         near_ground = torch.exp(-altitude / 5.0)
         horizontal_speed = torch.linalg.norm(lin_vel[:, :2], dim=-1)
-        desired_horizontal_speed = torch.clamp(
-            0.25 + 0.15 * altitude,
-            max=1.5,
-        )
-        desired_horizontal_velocity = (
-            delta_xy
-            / torch.clamp(distance_xy.unsqueeze(-1), min=1e-4)
-            * torch.minimum(0.35 * distance_xy, desired_horizontal_speed).unsqueeze(-1)
-        )
-        horizontal_velocity_error = torch.linalg.norm(
-            lin_vel[:, :2] - desired_horizontal_velocity,
-            dim=-1,
-        )
         vertical_speed = torch.abs(lin_vel[:, 2])
-        desired_vertical_speed = -torch.clamp(0.35 + 0.11 * altitude, max=3.0)
-        vertical_speed_error = torch.abs(lin_vel[:, 2] - desired_vertical_speed)
         angular_speed = torch.linalg.norm(ang_vel, dim=-1)
-        tilt_penalty, _ = self._tilt_against_terrain(quat, near_ground)
-        action_delta = torch.linalg.norm(self._actions - self._prev_actions, dim=-1)
-        desired_net_acceleration = torch.zeros_like(lin_vel)
-        desired_net_acceleration[:, :2] = torch.clamp(
-            0.20 * delta_xy - 0.60 * lin_vel[:, :2],
-            min=-1.0,
-            max=1.0,
-        )
-        desired_net_acceleration[:, 2] = torch.clamp(
-            desired_vertical_speed - lin_vel[:, 2],
-            min=-3.0,
-            max=3.0,
-        )
-        desired_thrust_acceleration = desired_net_acceleration.clone()
-        desired_thrust_acceleration[:, 2] -= float(self.cfg.sim.gravity[2])
-        actual_thrust_acceleration = self._forces[:, 0, :] / self._rocket_mass_kg.unsqueeze(-1)
-        # Horizontal gimbal force initially points opposite to the body tilt it
-        # creates (the engine is below the CoM).  Only supervise vertical
-        # braking here; horizontal credit comes from target progress.
-        guidance_error = torch.abs(
-            actual_thrust_acceleration[:, 2] - desired_thrust_acceleration[:, 2]
-        )
+        # theta on the board: residual attitude error against the local terrain
+        # normal near the ground, world vertical while still in flight.
+        _, tilt_angle = self._tilt_against_terrain(quat, near_ground)
         dt = float(self.step_dt)
+        cfg = self.cfg
+
+        # --- konum: bounded proximity reward, the board's -alpha*(1/konum)^beta.
+        # 1/(1+d) is 1 at the target and decays to 0 far out, so there is no
+        # singularity at d=0 (see the sign note on rew_wb_proximity_alpha).
+        proximity = torch.pow(1.0 / (1.0 + distance_xy), cfg.rew_wb_proximity_beta)
+
+        # --- -T0 * e^(IMU theta) * altitude^zeta.  tilt_angle is the residual
+        # attitude error against the local terrain normal, so matching a slope
+        # costs nothing; only deviating from it does.  e^theta - 1 keeps a
+        # perfectly aligned vehicle at exactly zero cost.
+        altitude_factor = torch.pow(
+            1.0 + altitude / cfg.max_altitude_m, cfg.rew_wb_tilt_altitude_zeta
+        )
+        tilt_cost = (torch.exp(tilt_angle) - 1.0) * altitude_factor
+
+        # --- -h * (F_ayak / F_ayak_max)^c.  Real per-foot normal force from the
+        # contact sensor where collision geometry exists; see _foot_normal_forces.
+        foot_forces = self._foot_normal_forces()
+        peak_foot_force = torch.amax(foot_forces, dim=-1)
+        foot_load_ratio = peak_foot_force / max(cfg.rew_wb_foot_force_max_n, 1e-6)
+        foot_load_cost = torch.pow(foot_load_ratio, cfg.rew_wb_foot_load_c)
+
+        # --- axis-separated position error, distinct from the radial term above.
+        rel_x = torch.abs(delta_xy[:, 0])
+        rel_y = torch.abs(delta_xy[:, 1])
+
+        throttle_cmd = self._actions[:, 0]
+        gimbal_cmd = torch.linalg.norm(self._actions[:, 1:], dim=-1)
+
         terms = {
-            "xy_progress": self.cfg.rew_progress * xy_progress,
-            "altitude_progress": self.cfg.rew_altitude_progress * altitude_progress,
-            "stability": dt * (
-                self.cfg.rew_tilt * tilt_penalty * (0.2 + 0.8 * near_ground)
-                + self.cfg.rew_angvel * angular_speed
+            # + alpha * (1/(1+konum))^beta
+            "proximity": dt * cfg.rew_wb_proximity_alpha * proximity,
+            # - T0 * e^(IMU theta) * altitude^zeta
+            "tilt": -dt * cfg.rew_wb_tilt_t0 * tilt_cost,
+            # - h * (F_ayak/F_ayak_max)^c
+            "foot_load": -dt * cfg.rew_wb_foot_load_h * foot_load_cost,
+            # - s0 * throttle^2
+            "throttle": -dt * cfg.rew_wb_throttle_s0 * throttle_cmd * throttle_cmd,
+            # - k_z * |z_hedef - z|  (altitude above the target's own surface)
+            "altitude": -dt * cfg.rew_wb_altitude_k * altitude,
+            # - |tvc|^d
+            "tvc": -dt * cfg.rew_wb_tvc_weight * torch.pow(gimbal_cmd, cfg.rew_wb_tvc_d),
+            # - x1*(relative_x)^x2 - x4*(relative_y)^x3
+            "rel_xy": -dt
+            * (
+                cfg.rew_wb_rel_x_weight * torch.pow(rel_x, cfg.rew_wb_rel_x_power)
+                + cfg.rew_wb_rel_y_weight * torch.pow(rel_y, cfg.rew_wb_rel_y_power)
             ),
-            "velocity": dt * (
-                self.cfg.rew_vxy
-                * horizontal_velocity_error
-                * (0.25 + 0.75 * near_ground)
-                + self.cfg.rew_vz * vertical_speed_error
+            # - x5*(V_xy)^x6, plus the vertical/angular braking the board's
+            # "Dikey hiz < 1" and "Acisal hiz < 0.5" constraints require.
+            "velocity": -dt
+            * (
+                cfg.rew_wb_vxy_weight * torch.pow(horizontal_speed, cfg.rew_wb_vxy_power)
+                + cfg.rew_wb_vz_weight * torch.pow(vertical_speed, cfg.rew_wb_vz_power)
+                + cfg.rew_wb_angular_weight * angular_speed
             ),
-            "guidance": dt * self.cfg.rew_guidance * guidance_error,
-            "control": (
-                dt * self.cfg.rew_fuel * self._actions[:, 0] * self._actions[:, 0]
-                + dt
-                * self.cfg.rew_gimbal
-                * torch.sum(self._actions[:, 1:] * self._actions[:, 1:], dim=-1)
-                + self.cfg.rew_smooth * action_delta
-            ),
-            "terrain": (
-                dt
-                * self.cfg.rew_terrain
-                * foot_clearance_spread
-                * torch.exp(-altitude / 10.0)
-            ),
-            "time": torch.full_like(altitude, dt * self.cfg.rew_time),
         }
 
         termination = self._last_termination_metrics
@@ -569,8 +572,11 @@ class LunarLanderEnv(DirectRLEnv):
             + 0.10 * torch.exp(-horizontal_speed / 0.75)
             + 0.10 * torch.exp(-tilt_angle / math.radians(8.0))
         )
-        failed = (out_of_bounds | escaped) & ~landed
-        harsh = landed & ~soft
+        # Whiteboard "Kisitlar": dikey hiz < 1. A touchdown faster than that is
+        # a structural failure, not merely a low-quality landing.
+        slammed = landed & (vertical_speed > self.cfg.crash_vertical_speed_mps)
+        failed = ((out_of_bounds | escaped) & ~landed) | slammed
+        harsh = landed & ~soft & ~slammed
         terminated = landed | failed
         self._last_termination_metrics = {
             "soft": soft.detach(),
@@ -844,6 +850,49 @@ class LunarLanderEnv(DirectRLEnv):
         # same cratered height field that its lidar and touchdown checks read;
         # see _terrain_normal for how attitude is judged against real slope.
         return raw_height + self._local_detail_height(xy_w, env_ids, origin_xy, radius)
+
+    def _foot_normal_forces(self) -> torch.Tensor:
+        """Per-foot normal force in Newtons, shape (num_envs, num_feet).
+
+        Two sources, in order of preference:
+
+        1. The real contact sensor (``self._contact_sensor``), when the scene
+           actually has collision geometry under the vehicle. Isaac Lab's
+           ContactSensor only supports *body-level* sensing, and this rocket's
+           four feet are geoms on the single ``hopper`` body (see
+           assets/rocket/hopper_lunar.xml), so the sensor reports one aggregate
+           contact force for the whole vehicle. It is split across the feet by
+           how close each foot is to the surface, which is a model, not a
+           measurement -- true per-foot load cells need each foot promoted to
+           its own rigid body in the asset.
+        2. A momentum estimate, used when there is no contact sensor or no
+           collision geometry to touch. The default GPU terrain-pool path is
+           analytic: terrain height is a math function, the only real collision
+           plane sits at z=-100, and touchdown is decided by comparing computed
+           clearance against a threshold -- nothing ever physically collides,
+           so a contact sensor there reads exactly zero. The estimate is the
+           peak force a touchdown at the current descent rate *would* produce,
+           F = m*|vz| / (t_contact * n_feet), which is what the foot-load term
+           is meant to discourage anyway.
+        """
+        num_feet = self._foot_offsets_b.shape[0]
+        sensor = getattr(self, "_contact_sensor", None)
+        if sensor is not None:
+            # (num_envs, num_bodies, 3) -> total contact force magnitude per env
+            net_forces = sensor.data.net_forces_w
+            total_force = torch.linalg.norm(net_forces, dim=-1).sum(dim=-1)
+            if bool(torch.any(total_force > 0.0)):
+                pos = self._rocket.data.root_pos_w
+                quat = _xyzw_to_wxyz(self._rocket.data.root_quat_w)
+                clearances = torch.clamp(self._foot_clearances(pos, quat), min=0.0)
+                # Lowest foot carries the most load; weights sum to 1 per env.
+                weights = 1.0 / (clearances + 1e-3)
+                weights = weights / torch.clamp(weights.sum(dim=-1, keepdim=True), min=1e-6)
+                return total_force.unsqueeze(-1) * weights
+        vertical_speed = torch.abs(self._rocket.data.root_lin_vel_w[:, 2])
+        contact_time = max(float(self.cfg.rew_wb_foot_contact_time_s), 1e-4)
+        estimated = self._rocket_mass_kg * vertical_speed / (contact_time * num_feet)
+        return estimated.unsqueeze(-1).expand(-1, num_feet)
 
     def _terrain_normal(self, xy_w: torch.Tensor) -> torch.Tensor:
         """Outward surface normal of the real (unflattened) terrain at xy_w."""

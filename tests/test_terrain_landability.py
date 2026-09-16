@@ -70,7 +70,10 @@ class TerrainLandabilityTests(unittest.TestCase):
     def test_tilt_is_judged_against_the_local_terrain_normal_near_touchdown(self) -> None:
         self.assertIn("def _terrain_normal(", self.source)
         self.assertIn("def _tilt_against_terrain(", self.source)
-        self.assertIn("tilt_penalty, _ = self._tilt_against_terrain(quat, near_ground)", self.source)
+        # Reward side (whiteboard's e^(IMU theta)) takes the angle; the
+        # termination gate takes the penalty form. Both must come from the
+        # terrain-normal-aware helper, never from raw world-vertical tilt.
+        self.assertIn("_, tilt_angle = self._tilt_against_terrain(quat, near_ground)", self.source)
         self.assertIn("tilt_penalty, tilt_angle = self._tilt_against_terrain(quat, near_ground)", self.source)
 
     def test_policy_observes_target_slope_direction_not_just_magnitude(self) -> None:

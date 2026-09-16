@@ -60,6 +60,10 @@ class LunarLanderEnvCfg(DirectRLEnvCfg):
                 enable_gyroscopic_forces=True,
             ),
             collision_props=sim_utils.CollisionPropertiesCfg(),
+            # Required for the foot-load ContactSensor: without it PhysX never
+            # applies the contact reporter API to the body and sensor init
+            # fails outright ("could not find any bodies with contact reporter API").
+            activate_contact_sensors=True,
             # fix_root_link moved off UsdFileCfg into the (solver-common)
             # articulation root properties as of Isaac Lab >=3.0 -- the
             # rocket must stay a floating base (it flies), not fixed to world.
@@ -161,11 +165,16 @@ class LunarLanderEnvCfg(DirectRLEnvCfg):
     lidar_ray_count = 64
     terrain_scan_count = 24
     landing_altitude_m = 0.04
+    # Whiteboard "Kısıtlar" block: bacaklar arası açıklık 0.16 m, dikey hız < 1,
+    # yatay ve açısal hız < 0.5, theta = +/-15 deg aralıkta inebilir.
     landing_max_foot_clearance_m = 0.16
-    soft_vertical_speed_mps = 0.9
-    soft_horizontal_speed_mps = 0.6
-    soft_tilt_deg = 10.0
+    soft_vertical_speed_mps = 0.5
+    soft_horizontal_speed_mps = 0.5
+    soft_tilt_deg = 15.0
     soft_angular_speed_rps = 0.5
+    # "Dikey hiz < 1": above this a touchdown is not a hard landing, it is a
+    # structural failure (crash), not just a low-quality one.
+    crash_vertical_speed_mps = 1.0
     terrain_height_scale_m = 0.45
     terrain_slope_scale = 0.035
     terrain_crater_count = 3
@@ -191,28 +200,79 @@ class LunarLanderEnvCfg(DirectRLEnvCfg):
     legacy_terrain_config_path = "configs/terrain_config.yaml"
     legacy_rocket_config_path = "configs/rocket_config.yaml"
     legacy_terrain_usd_max_envs = 16
+    # Real contact sensor on the vehicle body (the board's "Ayak basinci"
+    # sensor). Isaac Lab's ContactSensor is body-level only and the four feet
+    # are geoms on the single "hopper" body, so this reports one aggregate
+    # contact force -- see _foot_normal_forces for how it is split per foot and
+    # why the analytic terrain path falls back to a momentum estimate.
+    contact_sensor_enabled = True
     imu_accel_noise_std = 0.03
     imu_gyro_noise_std = 0.01
     altimeter_noise_std = 0.01
     lidar_noise_std = 0.015
 
-    # Dense terms are progress differences or per-second costs.  This avoids
-    # making an early crash attractive merely because it stops step penalties.
-    rew_progress = 12.0
-    rew_altitude_progress = 0.5
-    rew_tilt = -2.0
-    rew_angvel = -0.15
-    rew_vxy = -0.50
-    rew_vz = -8.0
-    rew_guidance = -6.0
-    rew_fuel = -0.02
-    # Kept small: a heavier gimbal penalty suppresses the TVC exploration SAC
-    # needs to learn control authority early on, and hurt success rate sharply
-    # in practice when set to -0.50 with a fixed (non-curriculum) gimbal range.
-    rew_gimbal = -0.05
-    rew_smooth = -0.005
-    rew_terrain = -0.30
-    rew_time = -0.02
+    # =================================================================
+    # Whiteboard reward model.  Each rew_wb_* field is one symbol from the
+    # hand-derived formula:
+    #
+    #   rew = -alpha*(1/konum)^beta  -  T0 * e^(IMU theta) * altitude^zeta
+    #         -  h * (F_ayak / F_ayak_max)^c
+    #         -  s0 * throttle^2  -  k_z * |z_hedef - z|  -  |tvc|^d
+    #         -  x1 * (relative_x)^x2  -  x4 * (relative_y)^x3
+    #         -  x5 * (V_xy)^x6
+    #         +  Landing_reward  -  Crash
+    #
+    # Dense terms are per-second costs (scaled by dt in _get_rewards) so a
+    # early crash is never attractive merely because it stops the penalty
+    # stream.  The terminal block below is a one-time per-episode payout.
+    # =================================================================
+
+    # -alpha*(1/konum)^beta.  NOTE ON SIGN: written literally, -a*(1/d)^b is
+    # most negative AT the target and ~0 far away, which rewards running away.
+    # Implemented as the bounded proximity *reward* +alpha*(1/(1+d))^beta
+    # (1 at the target, ->0 far out, no singularity) which is what "throttle
+    # ~ 1/konum" on the same board implies. To switch to a plain distance
+    # penalty instead, use -alpha * d^beta in _get_rewards.
+    rew_wb_proximity_alpha = 6.0
+    rew_wb_proximity_beta = 1.0
+    # -T0 * e^(IMU theta) * altitude^zeta.  theta is the attitude error against
+    # the LOCAL TERRAIN NORMAL (see _tilt_against_terrain), not world vertical,
+    # so banking to match a slope is not punished -- only the residual error is.
+    # zeta = 0 disables the altitude scaling (the board's "Yukseklik^zeta").
+    rew_wb_tilt_t0 = 2.0
+    rew_wb_tilt_altitude_zeta = 0.0
+    # -h * (F_ayak/F_ayak_max)^c.  See _get_rewards: F_ayak is ESTIMATED from
+    # momentum, not measured -- there is no contact sensor on this vehicle.
+    rew_wb_foot_load_h = 3.0
+    rew_wb_foot_load_c = 2.0
+    # Per-foot force budget, the board's "F_Bacak = [a, b]" constraint.
+    # Reference point: hovering puts m*g/4 = 1.66*1.62/4 ~= 0.67 N on each foot;
+    # a 0.5 m/s touchdown arrested over ~50 ms puts ~4 N on each foot.
+    rew_wb_foot_force_max_n = 8.0
+    rew_wb_foot_contact_time_s = 0.05
+    # -s0 * throttle^2
+    rew_wb_throttle_s0 = 0.05
+    # -k_z * |z_hedef - z|: altitude above the target's own surface, i.e. the
+    # board's "25 m -> 0 m" descent driver.
+    rew_wb_altitude_k = 0.2
+    # -|tvc|^d
+    rew_wb_tvc_d = 2.0
+    rew_wb_tvc_weight = 0.05
+    # -x1*(relative_x)^x2 - x4*(relative_y)^x3: axis-separated position error,
+    # kept distinct from the radial proximity term above on purpose.
+    rew_wb_rel_x_weight = 0.5
+    rew_wb_rel_x_power = 2.0
+    rew_wb_rel_y_weight = 0.5
+    rew_wb_rel_y_power = 2.0
+    # -x5*(V_xy)^x6
+    rew_wb_vxy_weight = 1.0
+    rew_wb_vxy_power = 2.0
+    # Vertical speed is not an explicit term on the board, but "Dikey hiz < 1"
+    # is a hard constraint and nothing else in the formula brakes the descent.
+    rew_wb_vz_weight = 4.0
+    rew_wb_vz_power = 2.0
+    rew_wb_angular_weight = 0.15
+
     rew_soft_landing = 300.0
     # A harsh touchdown must stay negative even at maximum quality; otherwise
     # SAC learns to farm "almost good" crashes instead of crossing the soft gate.

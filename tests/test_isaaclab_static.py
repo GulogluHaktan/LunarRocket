@@ -50,21 +50,59 @@ class IsaacLabStaticTests(unittest.TestCase):
         self.assertIn("hover_throttle * (raw_throttle + 1.0)", source)
         self.assertIn("max_commanded_throttle = 0.35", source)
 
-    def test_reward_is_progress_based_and_logs_completed_episodes(self) -> None:
+    def test_reward_follows_the_whiteboard_model_and_logs_completed_episodes(self) -> None:
         source = _combined_env_source()
 
         self.assertNotIn("rew_target =", source)
-        self.assertIn("self._previous_altitude - altitude", source)
-        self.assertIn("horizontal_velocity_error", source)
-        self.assertIn("desired_horizontal_velocity", source)
-        self.assertIn("desired_vertical_speed", source)
+        # Every symbol of the hand-derived formula has a cfg field and a term.
+        for field in (
+            "rew_wb_proximity_alpha",
+            "rew_wb_proximity_beta",
+            "rew_wb_tilt_t0",
+            "rew_wb_tilt_altitude_zeta",
+            "rew_wb_foot_load_h",
+            "rew_wb_foot_load_c",
+            "rew_wb_foot_force_max_n",
+            "rew_wb_throttle_s0",
+            "rew_wb_altitude_k",
+            "rew_wb_tvc_d",
+            "rew_wb_rel_x_power",
+            "rew_wb_rel_y_power",
+            "rew_wb_vxy_power",
+        ):
+            self.assertIn(field, source, f"missing whiteboard reward field {field}")
+        for term in ("proximity", "tilt", "foot_load", "throttle", "altitude", "tvc", "rel_xy", "velocity"):
+            self.assertIn(f'"{term}"', source, f"missing whiteboard reward term {term}")
+        # Dense terms stay per-second so an early crash never pays off by
+        # cutting off the penalty stream.
         self.assertIn("dt = float(self.step_dt)", source)
+        # theta is measured against the terrain normal, not world vertical.
+        self.assertIn("_, tilt_angle = self._tilt_against_terrain(quat, near_ground)", source)
+        # Foot load comes from the contact sensor where it can, momentum
+        # otherwise -- never silently from nothing.
+        self.assertIn("def _foot_normal_forces(", source)
+        self.assertIn("contact_sensor_enabled = True", source)
         self.assertIn("curriculum_success_threshold", source)
         self.assertIn("policy_max_gimbal_deg = 8.0", source)
-        self.assertIn("self.cfg.rew_gimbal", source)
         self.assertIn('log["Curriculum/difficulty"]', source)
         self.assertIn('log["Metrics/success_rate"]', source)
         self.assertIn('terms["terminal"] = terminal', source)
+
+    def test_whiteboard_landing_gates_match_the_board_constraints(self) -> None:
+        source = _combined_env_source()
+
+        # "Kisitlar" block: theta +/-15 deg, dikey hiz < 1 (crash above),
+        # yatay ve acisal hiz < 0.5, bacaklar arasi 0.16 m.
+        self.assertIn("soft_tilt_deg = 15.0", source)
+        self.assertIn("soft_vertical_speed_mps = 0.5", source)
+        self.assertIn("soft_horizontal_speed_mps = 0.5", source)
+        self.assertIn("soft_angular_speed_rps = 0.5", source)
+        self.assertIn("landing_max_foot_clearance_m = 0.16", source)
+        self.assertIn("crash_vertical_speed_mps = 1.0", source)
+        # Slamming in above the vertical-speed constraint is a failure, not a
+        # merely-harsh landing that could still collect the quality bonus.
+        self.assertIn("slammed = landed & (vertical_speed > self.cfg.crash_vertical_speed_mps)", source)
+        self.assertIn("harsh = landed & ~soft & ~slammed", source)
 
     def test_isaaclab_uses_exact_xml_derived_articulation(self) -> None:
         source = _combined_env_source()
@@ -116,7 +154,7 @@ class IsaacLabStaticTests(unittest.TestCase):
         self.assertNotIn("* self.cfg.max_thrust_n", source)
         self.assertIn("hover_throttle = self._rocket_mass_kg * abs(float(self.cfg.sim.gravity[2])) / self._max_thrust_n", source)
         self.assertIn("force_w = thrust_dir_w * (self._actions[:, 0:1] * self._max_thrust_n.unsqueeze(-1))", source)
-        self.assertIn("actual_thrust_acceleration = self._forces[:, 0, :] / self._rocket_mass_kg.unsqueeze(-1)", source)
+        self.assertIn("estimated = self._rocket_mass_kg * vertical_speed / (contact_time * num_feet)", source)
 
     def test_residual_action_is_a_disabled_by_default_scaffold(self) -> None:
         source = _combined_env_source()
