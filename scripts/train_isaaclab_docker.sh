@@ -82,7 +82,7 @@ TERRAIN_HYBRID_CONTACT_RADIUS_M="${ISAACLAB_TERRAIN_HYBRID_CONTACT_RADIUS_M:-1.5
 # SAC agent seed override; empty means "use sb3_sac_cfg.yaml's own seed (42)".
 SEED="${ISAACLAB_SEED:-}"
 RL_DEPS_ROOT="${ISAAC_DOCKER_CACHE:-$HOME/docker/isaac-sim}/rl_deps_py312"
-TRAIN_SCRIPT="source/lunar_rocket_lab/scripts/train_sac.py"
+TRAIN_SCRIPT="${TRAIN_SCRIPT:-source/lunar_rocket_lab/scripts/train_sac.py}"
 AGENT_ENTRY="sb3_sac_cfg_entry_point"
 
 if [[ "$ALGO" == "ppo" ]]; then
@@ -147,6 +147,8 @@ docker run --rm \
   -e LOG_INTERVAL="$LOG_INTERVAL" \
   -e CHECKPOINT="$CHECKPOINT" \
   -e HEADLESS_FLAG="$HEADLESS_FLAG" \
+  -e VIDEO="${ISAACLAB_VIDEO:-0}" \
+  -e VIDEO_LENGTH="${ISAACLAB_VIDEO_LENGTH:-100}" \
   -e INSTALL_MODE="$INSTALL_MODE" \
   -e ISAACLAB_TERRAIN_QUALITY="$TERRAIN_QUALITY" \
   -e ISAACLAB_TERRAIN_LOCAL_RESOLUTION="$TERRAIN_LOCAL_RESOLUTION" \

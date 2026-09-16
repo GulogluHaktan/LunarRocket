@@ -14,6 +14,8 @@ SEED="${SEED:-}"
 HEADLESS_FLAG="${HEADLESS_FLAG:---headless}"
 INSTALL_MODE="${INSTALL_MODE:-0}"
 SKIP_TRAIN="${SKIP_TRAIN:-0}"
+VIDEO="${VIDEO:-0}"
+VIDEO_LENGTH="${VIDEO_LENGTH:-100}"
 
 export TERM=xterm
 ln -sfn /isaac-sim /workspace/IsaacLab/_isaac_sim
@@ -116,5 +118,11 @@ if [[ -n "$SEED" ]]; then
 fi
 if [[ -n "$HEADLESS_FLAG" ]]; then
   TRAIN_ARGS+=($HEADLESS_FLAG)
+fi
+if [[ "$VIDEO" == "1" || "$VIDEO" == "true" ]]; then
+  # A large video_interval means the step_trigger (step % video_interval == 0)
+  # only fires once, at step 0 -- otherwise RecordVideo restarts a new (mostly
+  # empty) clip on every subsequent step it fires on.
+  TRAIN_ARGS+=(--video --video_length "$VIDEO_LENGTH" --video_interval 100000)
 fi
 "${TRAIN_ARGS[@]}"

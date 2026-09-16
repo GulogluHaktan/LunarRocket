@@ -136,14 +136,26 @@ def main() -> None:
                         f"foot_spread={float(metrics['foot_clearance_spread'][0]):.3f}",
                         flush=True,
                     )
-                if step % 120 == 0:
+                if step % 30 == 0:
                     _set_camera_on_first_rocket(unwrapped)
                     elapsed = max(time.perf_counter() - timing_start, 1e-6)
-                    pos_z = float(unwrapped._rocket.data.root_pos_w[0, 2])
+                    pos = unwrapped._rocket.data.root_pos_w[0]
+                    quat = unwrapped._rocket.data.root_quat_w[0]  # (w, x, y, z)
                     vel_z = float(unwrapped._rocket.data.root_lin_vel_w[0, 2])
+                    # local +Z axis expressed in world frame: >0 means right-side up
+                    # (legs/engine pointing toward world -Z, nose toward +Z), <0 upside down.
+                    w, x, y, z = (float(v) for v in quat)
+                    world_up_z = 1.0 - 2.0 * (x * x + y * y)
+                    orientation = "RIGHT-SIDE-UP" if world_up_z > 0 else "UPSIDE-DOWN"
+                    throttle_pct = 100.0 * float(preview_action[0, 0].clamp(-1.0, 1.0) * 0.5 + 0.5)
+                    yaw_gimbal_deg = float(unwrapped._rocket.data.joint_pos[0, unwrapped._yaw_joint_ids[0]]) * 57.29578
+                    pitch_gimbal_deg = float(unwrapped._rocket.data.joint_pos[0, unwrapped._pitch_joint_ids[0]]) * 57.29578
                     print(
-                        f"[LunarRocket] preview step {step}/{steps}, average FPS={max(step, 1) / elapsed:.1f}, "
-                        f"root_z={pos_z:.3f}, vz={vel_z:.3f}",
+                        f"[LunarRocket] step {step}/{steps} FPS={max(step, 1) / elapsed:.1f} "
+                        f"pos=({float(pos[0]):.2f},{float(pos[1]):.2f},{float(pos[2]):.2f}) vz={vel_z:.3f} "
+                        f"quat(w,x,y,z)=({w:.3f},{x:.3f},{y:.3f},{z:.3f}) [{orientation}, world_up_z={world_up_z:.3f}] "
+                        f"raw_throttle_cmd={float(preview_action[0, 0]):.3f} (~{throttle_pct:.0f}% of commandable range) "
+                        f"gimbal_yaw={yaw_gimbal_deg:.1f}deg gimbal_pitch={pitch_gimbal_deg:.1f}deg",
                         flush=True,
                     )
                 sleep_time = dt - (time.time() - start_time)
