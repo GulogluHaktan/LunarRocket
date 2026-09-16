@@ -326,7 +326,7 @@ class LunarLanderEnv(DirectRLEnv):
             dim=-1,
         )
         thrust_dir_b = thrust_dir_b / torch.clamp(torch.linalg.norm(thrust_dir_b, dim=-1, keepdim=True), min=1e-6)
-        quat = self._rocket.data.root_quat_w
+        quat = _xyzw_to_wxyz(self._rocket.data.root_quat_w)
         thrust_dir_w = _quat_rotate(quat, thrust_dir_b)
         force_w = thrust_dir_w * (self._actions[:, 0:1] * self._max_thrust_n.unsqueeze(-1))
         lever_b = torch.zeros_like(thrust_dir_b)
@@ -360,7 +360,7 @@ class LunarLanderEnv(DirectRLEnv):
 
     def _get_observations(self) -> dict[str, torch.Tensor]:
         pos = self._rocket.data.root_pos_w
-        quat = self._rocket.data.root_quat_w
+        quat = _xyzw_to_wxyz(self._rocket.data.root_quat_w)
         lin_vel = self._rocket.data.root_lin_vel_w
         ang_vel = self._rocket.data.root_ang_vel_w
         foot_clearances = self._foot_clearances(pos, quat)
@@ -401,7 +401,7 @@ class LunarLanderEnv(DirectRLEnv):
 
     def _get_rewards(self) -> torch.Tensor:
         pos = self._rocket.data.root_pos_w
-        quat = self._rocket.data.root_quat_w
+        quat = _xyzw_to_wxyz(self._rocket.data.root_quat_w)
         lin_vel = self._rocket.data.root_lin_vel_w
         ang_vel = self._rocket.data.root_ang_vel_w
 
@@ -509,7 +509,7 @@ class LunarLanderEnv(DirectRLEnv):
 
     def _get_dones(self) -> tuple[torch.Tensor, torch.Tensor]:
         pos = self._rocket.data.root_pos_w
-        quat = self._rocket.data.root_quat_w
+        quat = _xyzw_to_wxyz(self._rocket.data.root_quat_w)
         lin_vel = self._rocket.data.root_lin_vel_w
         ang_vel = self._rocket.data.root_ang_vel_w
         foot_clearances = self._foot_clearances(pos, quat)
@@ -675,7 +675,10 @@ class LunarLanderEnv(DirectRLEnv):
         self._randomize_terrain(env_ids, origins[:, :2])
         root_state[:, :2] = target_xy + spawn_offset
         root_state[:, 2] = self._upright_root_height(root_state[:, :2]) + spawn_altitudes
-        root_state[:, 3:7] = torch.tensor((1.0, 0.0, 0.0, 0.0), device=self.device)
+        # write_root_pose_to_sim expects (x, y, z, w); this is identity (no rotation).
+        # A (w,x,y,z)-style (1,0,0,0) here is silently read back as x=1,w=0 --
+        # a 180 deg roll about world X, i.e. the rocket spawns upside down.
+        root_state[:, 3:7] = torch.tensor((0.0, 0.0, 0.0, 1.0), device=self.device)
         root_state[:, 7:] = 0.0
         self._rocket.write_root_pose_to_sim(root_state[:, :7], env_ids)
         self._rocket.write_root_velocity_to_sim(root_state[:, 7:], env_ids)
@@ -1382,6 +1385,24 @@ class LunarLanderEnv(DirectRLEnv):
             top = heights[r0, c0] * (1.0 - cf) + heights[r0, c1] * cf
             bottom = heights[r1, c0] * (1.0 - cf) + heights[r1, c1] * cf
         return top * (1.0 - rf) + bottom * rf
+
+
+def _xyzw_to_wxyz(quat_xyzw: torch.Tensor) -> torch.Tensor:
+    # Isaac Lab's ArticulationData.root_quat_w / write_root_pose_to_sim_index
+    # use (x, y, z, w) (see base_rigid_object_data.py's QUAT_XYZW_ELEMENT_NAMES
+    # and base_rigid_object.py's write_root_pose_to_sim_index docstring).
+    # Every helper below (_quat_rotate etc.) expects (w, x, y, z) -- convert
+    # once at this read boundary. Getting this wrong silently spawns the
+    # rocket rotated 180 deg about the world X axis (upside down): an
+    # (x,y,z,w)=(0,0,0,1) identity misread as (w,x,y,z) becomes w=0, x=0,
+    # y=0, z=1 -- a 180 deg yaw, not upside-down -- but the reverse mistake
+    # (writing an intended (w,x,y,z) identity (1,0,0,0) into an (x,y,z,w)
+    # slot) is read back as x=1, w=0: a 180 deg roll about X.
+    return quat_xyzw[..., (3, 0, 1, 2)]
+
+
+def _wxyz_to_xyzw(quat_wxyz: torch.Tensor) -> torch.Tensor:
+    return quat_wxyz[..., (1, 2, 3, 0)]
 
 
 def _quat_rotate(quat_wxyz: torch.Tensor, vec: torch.Tensor) -> torch.Tensor:

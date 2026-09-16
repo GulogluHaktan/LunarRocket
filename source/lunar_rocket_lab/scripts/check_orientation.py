@@ -31,11 +31,13 @@ with launch_simulation(env_cfg, args_cli):
     env = gym.make(args_cli.task, cfg=env_cfg).unwrapped
     env.reset()
 
-    quat = env._rocket.data.root_quat_w  # (w, x, y, z)
+    # ArticulationData.root_quat_w is (x, y, z, w) in Isaac Lab 3.0
+    # (base_rigid_object_data.py: QUAT_XYZW_ELEMENT_NAMES), not (w, x, y, z).
+    quat = env._rocket.data.root_quat_w  # (x, y, z, w)
     pos = env._rocket.data.root_pos_w
 
     def quat_rotate(q, v):
-        w, x, y, z = q.unbind(-1)
+        x, y, z, w = q.unbind(-1)
         qvec = torch.stack([x, y, z], dim=-1)
         uv = torch.cross(qvec, v.expand_as(qvec), dim=-1)
         uuv = torch.cross(qvec, uv, dim=-1)
@@ -48,7 +50,7 @@ with launch_simulation(env_cfg, args_cli):
         q = quat[i].tolist()
         p = pos[i].tolist()
         up = world_up_component[i].tolist()
-        print(f"env {i}: pos={p} quat(w,x,y,z)={q} local_+Z_in_world={up}")
+        print(f"env {i}: pos={p} quat(x,y,z,w)={q} local_+Z_in_world={up}")
         print(f"  -> {'RIGHT-SIDE UP (nose/legs-down-ish)' if up[2] > 0 else 'UPSIDE DOWN'} (world_z_component={up[2]:.4f})")
 
     env.close()

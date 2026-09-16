@@ -140,11 +140,15 @@ def main() -> None:
                     _set_camera_on_first_rocket(unwrapped)
                     elapsed = max(time.perf_counter() - timing_start, 1e-6)
                     pos = unwrapped._rocket.data.root_pos_w[0]
-                    quat = unwrapped._rocket.data.root_quat_w[0]  # (w, x, y, z)
+                    # ArticulationData.root_quat_w is (x, y, z, w) in Isaac Lab
+                    # 3.0 (base_rigid_object_data.py: QUAT_XYZW_ELEMENT_NAMES),
+                    # NOT (w, x, y, z) -- reading it as the latter is exactly
+                    # the bug that spawned the rocket 180 deg rolled about X.
+                    quat = unwrapped._rocket.data.root_quat_w[0]  # (x, y, z, w)
                     vel_z = float(unwrapped._rocket.data.root_lin_vel_w[0, 2])
                     # local +Z axis expressed in world frame: >0 means right-side up
                     # (legs/engine pointing toward world -Z, nose toward +Z), <0 upside down.
-                    w, x, y, z = (float(v) for v in quat)
+                    x, y, z, w = (float(v) for v in quat)
                     world_up_z = 1.0 - 2.0 * (x * x + y * y)
                     orientation = "RIGHT-SIDE-UP" if world_up_z > 0 else "UPSIDE-DOWN"
                     throttle_pct = 100.0 * float(preview_action[0, 0].clamp(-1.0, 1.0) * 0.5 + 0.5)
@@ -153,7 +157,7 @@ def main() -> None:
                     print(
                         f"[LunarRocket] step {step}/{steps} FPS={max(step, 1) / elapsed:.1f} "
                         f"pos=({float(pos[0]):.2f},{float(pos[1]):.2f},{float(pos[2]):.2f}) vz={vel_z:.3f} "
-                        f"quat(w,x,y,z)=({w:.3f},{x:.3f},{y:.3f},{z:.3f}) [{orientation}, world_up_z={world_up_z:.3f}] "
+                        f"quat(x,y,z,w)=({x:.3f},{y:.3f},{z:.3f},{w:.3f}) [{orientation}, world_up_z={world_up_z:.3f}] "
                         f"raw_throttle_cmd={float(preview_action[0, 0]):.3f} (~{throttle_pct:.0f}% of commandable range) "
                         f"gimbal_yaw={yaw_gimbal_deg:.1f}deg gimbal_pitch={pitch_gimbal_deg:.1f}deg",
                         flush=True,

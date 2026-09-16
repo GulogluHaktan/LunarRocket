@@ -92,6 +92,56 @@ def main() -> None:
                         self.logger.record_mean(key, float(value))
                 return True
 
+        class TelemetryCSVCallback(BaseCallback):
+            """Log per-step position/orientation/action/reward for env 0 to a CSV file.
+
+            Opt-in (ISAACLAB_TELEMETRY_CSV=<path>) since writing every vector-step
+            is I/O overhead not worth paying during real training runs -- meant
+            for short debug runs to inspect actual rocket behavior offline.
+            """
+
+            def __init__(self, raw_env, csv_path: str, every_n_steps: int = 1):
+                super().__init__()
+                self._raw_env = raw_env
+                self._every_n_steps = max(1, every_n_steps)
+                self._path = csv_path
+                self._file = open(csv_path, "w", newline="")
+                self._writer = None
+
+            def _on_training_start(self) -> None:
+                import csv
+
+                self._writer = csv.writer(self._file)
+                self._writer.writerow(
+                    [
+                        "timestep",
+                        "pos_x", "pos_y", "pos_z",
+                        # ArticulationData.root_quat_w is (x, y, z, w) in Isaac Lab 3.0
+                        # (base_rigid_object_data.py: QUAT_XYZW_ELEMENT_NAMES) -- logged
+                        # in that same native order, not (w, x, y, z).
+                        "quat_x", "quat_y", "quat_z", "quat_w",
+                        "action_throttle", "action_gimbal_yaw", "action_gimbal_pitch",
+                        "vz", "reward",
+                    ]
+                )
+                print(f"[LunarRocket] telemetry CSV: {self._path}", flush=True)
+
+            def _on_step(self) -> bool:
+                if self.num_timesteps % self._every_n_steps != 0:
+                    return True
+                env = self._raw_env
+                pos = env._rocket.data.root_pos_w[0].tolist()
+                quat = env._rocket.data.root_quat_w[0].tolist()
+                action = env._actions[0].tolist()
+                vz = float(env._rocket.data.root_lin_vel_w[0, 2])
+                rewards = self.locals.get("rewards")
+                reward = float(rewards[0]) if rewards is not None else float("nan")
+                self._writer.writerow([self.num_timesteps, *pos, *quat, *action, vz, reward])
+                return True
+
+            def _on_training_end(self) -> None:
+                self._file.close()
+
         class EntCoefFloorCallback(BaseCallback):
             """Keep SAC's auto-tuned entropy coefficient from collapsing to ~0.
 
@@ -208,6 +258,7 @@ def main() -> None:
             print_dict(video_kwargs, nesting=4)
             env = gym.wrappers.RecordVideo(env, **video_kwargs)
 
+        raw_env = env.unwrapped
         start_time = time.time()
         env = Sb3VecEnvWrapper(env, fast_variant=not args_cli.keep_all_info)
 
@@ -264,6 +315,10 @@ def main() -> None:
             ),
             LogEveryNTimesteps(n_steps=args_cli.log_interval),
         ]
+        telemetry_csv = os.environ.get("ISAACLAB_TELEMETRY_CSV")
+        if telemetry_csv:
+            every_n = int(os.environ.get("ISAACLAB_TELEMETRY_EVERY_N_STEPS", "1"))
+            callbacks.append(TelemetryCSVCallback(raw_env, telemetry_csv, every_n_steps=every_n))
         with contextlib.suppress(KeyboardInterrupt):
             agent.learn(total_timesteps=n_timesteps, callback=callbacks, progress_bar=True, log_interval=None)
 
