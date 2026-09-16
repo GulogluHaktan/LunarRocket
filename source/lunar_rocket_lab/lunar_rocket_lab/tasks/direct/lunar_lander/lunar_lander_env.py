@@ -108,6 +108,23 @@ class LunarLanderEnv(DirectRLEnv):
         self._terrain_hybrid_contact_radius_m = float(
             os.environ.get("ISAACLAB_TERRAIN_HYBRID_CONTACT_RADIUS_M", self.cfg.terrain_hybrid_contact_radius_m)
         )
+        # Debug/watch-only override: the trained-and-tuned default (0.006-0.020 m,
+        # see CLAUDE.md/experiments/terrain_transition) is a physical micro-roughness
+        # term feeding the foot-clearance landing gate, not meant to be visible from
+        # a normal camera distance -- deliberately NOT the cfg default so a real
+        # training run never picks this up by accident.
+        detail_amp_min = os.environ.get("ISAACLAB_TERRAIN_DETAIL_AMPLITUDE_MIN_M")
+        detail_amp_max = os.environ.get("ISAACLAB_TERRAIN_DETAIL_AMPLITUDE_MAX_M")
+        if detail_amp_min or detail_amp_max:
+            lo, hi = self.cfg.terrain_detail_amplitude_range_m
+            lo = float(detail_amp_min) if detail_amp_min else lo
+            hi = float(detail_amp_max) if detail_amp_max else hi
+            self.cfg.terrain_detail_amplitude_range_m = (lo, hi)
+            print(
+                f"[LunarRocket] terrain_detail_amplitude_range_m overridden to ({lo}, {hi}) -- "
+                "watch/debug only, do not use for real training runs",
+                flush=True,
+            )
         # Recorded back onto cfg so params/env.yaml (dumped by train_sac.py)
         # captures which blend method this run actually used, not just the
         # class default -- needed to tell the 3 comparison runs' logs apart.
