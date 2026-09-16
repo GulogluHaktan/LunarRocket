@@ -1,0 +1,239 @@
+{
+  "caveat": "Each (method, seed) run contributes ONE final-window summary value per metric (mean of the run's last 10% of logged points). Cross-method comparisons below use these per-seed values as independent samples (Mann-Whitney U, unpaired), which is the statistically appropriate unit for RL training outcomes -- unlike treating within-run autocorrelated points as independent (pseudoreplication). With only a handful of seeds per method, this remains LOW-POWER: a non-significant p-value here does not establish equivalence, and even a significant one should be read as an indicative effect size, not a definitive claim, per Henderson et al. (2018) 'Deep Reinforcement Learning That Matters' (AAAI).",
+  "tests": [
+    {
+      "metric": "Metrics/success_rate",
+      "comparison": "smoothstep vs gaussian",
+      "n": [
+        3,
+        3
+      ],
+      "mean_a": 0.278,
+      "mean_b": 0.3252,
+      "values_a": [
+        0.2382,
+        0.2553,
+        0.3407
+      ],
+      "values_b": [
+        0.3495,
+        0.3596,
+        0.2663
+      ],
+      "mean_diff_a_minus_b": -0.0474,
+      "bootstrap_95pct_CI": [
+        -0.1124,
+        0.0181
+      ],
+      "mannwhitney_pvalue": "2.000e-01"
+    },
+    {
+      "metric": "Metrics/success_rate",
+      "comparison": "smoothstep vs hybrid",
+      "n": [
+        3,
+        3
+      ],
+      "mean_a": 0.278,
+      "mean_b": 0.2684,
+      "values_a": [
+        0.2382,
+        0.2553,
+        0.3407
+      ],
+      "values_b": [
+        0.2943,
+        0.2447,
+        0.2664
+      ],
+      "mean_diff_a_minus_b": 0.01,
+      "bootstrap_95pct_CI": [
+        -0.0396,
+        0.0675
+      ],
+      "mannwhitney_pvalue": "1.000e+00"
+    },
+    {
+      "metric": "Metrics/success_rate",
+      "comparison": "gaussian vs hybrid",
+      "n": [
+        3,
+        3
+      ],
+      "mean_a": 0.3252,
+      "mean_b": 0.2684,
+      "values_a": [
+        0.3495,
+        0.3596,
+        0.2663
+      ],
+      "values_b": [
+        0.2943,
+        0.2447,
+        0.2664
+      ],
+      "mean_diff_a_minus_b": 0.0565,
+      "bootstrap_95pct_CI": [
+        -0.0001,
+        0.1043
+      ],
+      "mannwhitney_pvalue": "4.000e-01"
+    },
+    {
+      "metric": "Metrics/timeout_rate",
+      "comparison": "smoothstep vs gaussian",
+      "n": [
+        3,
+        3
+      ],
+      "mean_a": 0.4987,
+      "mean_b": 0.454,
+      "values_a": [
+        0.5566,
+        0.5002,
+        0.4392
+      ],
+      "values_b": [
+        0.4583,
+        0.3779,
+        0.5258
+      ],
+      "mean_diff_a_minus_b": 0.0453,
+      "bootstrap_95pct_CI": [
+        -0.0438,
+        0.1331
+      ],
+      "mannwhitney_pvalue": "7.000e-01"
+    },
+    {
+      "metric": "Metrics/timeout_rate",
+      "comparison": "smoothstep vs hybrid",
+      "n": [
+        3,
+        3
+      ],
+      "mean_a": 0.4987,
+      "mean_b": 0.5148,
+      "values_a": [
+        0.5566,
+        0.5002,
+        0.4392
+      ],
+      "values_b": [
+        0.4949,
+        0.532,
+        0.5174
+      ],
+      "mean_diff_a_minus_b": -0.0165,
+      "bootstrap_95pct_CI": [
+        -0.0725,
+        0.0392
+      ],
+      "mannwhitney_pvalue": "1.000e+00"
+    },
+    {
+      "metric": "Metrics/timeout_rate",
+      "comparison": "gaussian vs hybrid",
+      "n": [
+        3,
+        3
+      ],
+      "mean_a": 0.454,
+      "mean_b": 0.5148,
+      "values_a": [
+        0.4583,
+        0.3779,
+        0.5258
+      ],
+      "values_b": [
+        0.4949,
+        0.532,
+        0.5174
+      ],
+      "mean_diff_a_minus_b": -0.0606,
+      "bootstrap_95pct_CI": [
+        -0.132,
+        0.0084
+      ],
+      "mannwhitney_pvalue": "4.000e-01"
+    },
+    {
+      "metric": "Metrics/harsh_landing_rate",
+      "comparison": "smoothstep vs gaussian",
+      "n": [
+        3,
+        3
+      ],
+      "mean_a": 0.2199,
+      "mean_b": 0.2179,
+      "values_a": [
+        0.2038,
+        0.2445,
+        0.2114
+      ],
+      "values_b": [
+        0.1863,
+        0.2604,
+        0.207
+      ],
+      "mean_diff_a_minus_b": 0.0017,
+      "bootstrap_95pct_CI": [
+        -0.0405,
+        0.0403
+      ],
+      "mannwhitney_pvalue": "1.000e+00"
+    },
+    {
+      "metric": "Metrics/harsh_landing_rate",
+      "comparison": "smoothstep vs hybrid",
+      "n": [
+        3,
+        3
+      ],
+      "mean_a": 0.2199,
+      "mean_b": 0.2135,
+      "values_a": [
+        0.2038,
+        0.2445,
+        0.2114
+      ],
+      "values_b": [
+        0.2099,
+        0.2219,
+        0.2088
+      ],
+      "mean_diff_a_minus_b": 0.0063,
+      "bootstrap_95pct_CI": [
+        -0.0115,
+        0.0306
+      ],
+      "mannwhitney_pvalue": "1.000e+00"
+    },
+    {
+      "metric": "Metrics/harsh_landing_rate",
+      "comparison": "gaussian vs hybrid",
+      "n": [
+        3,
+        3
+      ],
+      "mean_a": 0.2179,
+      "mean_b": 0.2135,
+      "values_a": [
+        0.1863,
+        0.2604,
+        0.207
+      ],
+      "values_b": [
+        0.2099,
+        0.2219,
+        0.2088
+      ],
+      "mean_diff_a_minus_b": 0.0043,
+      "bootstrap_95pct_CI": [
+        -0.0269,
+        0.0465
+      ],
+      "mannwhitney_pvalue": "7.000e-01"
+    }
+  ]
+}

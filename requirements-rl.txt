@@ -1,2 +1,2 @@
-gymnasium>=0.29,<1.1
+gymnasium>=1.2.0
 stable-baselines3>=2.3,<3.0

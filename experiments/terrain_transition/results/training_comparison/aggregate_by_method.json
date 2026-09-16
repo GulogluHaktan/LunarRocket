@@ -1,0 +1,113 @@
+[
+  {
+    "method": "smoothstep",
+    "n_seeds": 3,
+    "seeds": [
+      7,
+      42,
+      123
+    ],
+    "success_rate_mean": 0.278,
+    "success_rate_std": 0.0549,
+    "success_rate_values": [
+      0.2382,
+      0.2553,
+      0.3407
+    ],
+    "timeout_rate_mean": 0.4987,
+    "timeout_rate_std": 0.0587,
+    "timeout_rate_values": [
+      0.5566,
+      0.5002,
+      0.4392
+    ],
+    "harsh_landing_rate_mean": 0.2199,
+    "harsh_landing_rate_std": 0.0217,
+    "harsh_landing_rate_values": [
+      0.2038,
+      0.2445,
+      0.2114
+    ],
+    "difficulty_mean": 0.2756,
+    "difficulty_std": 0.025,
+    "difficulty_values": [
+      0.3,
+      0.2768,
+      0.25
+    ]
+  },
+  {
+    "method": "gaussian",
+    "n_seeds": 3,
+    "seeds": [
+      7,
+      42,
+      123
+    ],
+    "success_rate_mean": 0.3252,
+    "success_rate_std": 0.0512,
+    "success_rate_values": [
+      0.3495,
+      0.3596,
+      0.2663
+    ],
+    "timeout_rate_mean": 0.454,
+    "timeout_rate_std": 0.074,
+    "timeout_rate_values": [
+      0.4583,
+      0.3779,
+      0.5258
+    ],
+    "harsh_landing_rate_mean": 0.2179,
+    "harsh_landing_rate_std": 0.0382,
+    "harsh_landing_rate_values": [
+      0.1863,
+      0.2604,
+      0.207
+    ],
+    "difficulty_mean": 0.25,
+    "difficulty_std": 0.0,
+    "difficulty_values": [
+      0.25,
+      0.25,
+      0.25
+    ]
+  },
+  {
+    "method": "hybrid",
+    "n_seeds": 3,
+    "seeds": [
+      7,
+      42,
+      123
+    ],
+    "success_rate_mean": 0.2684,
+    "success_rate_std": 0.0249,
+    "success_rate_values": [
+      0.2943,
+      0.2447,
+      0.2664
+    ],
+    "timeout_rate_mean": 0.5148,
+    "timeout_rate_std": 0.0187,
+    "timeout_rate_values": [
+      0.4949,
+      0.532,
+      0.5174
+    ],
+    "harsh_landing_rate_mean": 0.2135,
+    "harsh_landing_rate_std": 0.0072,
+    "harsh_landing_rate_values": [
+      0.2099,
+      0.2219,
+      0.2088
+    ],
+    "difficulty_mean": 0.26,
+    "difficulty_std": 0.0174,
+    "difficulty_values": [
+      0.2801,
+      0.25,
+      0.25
+    ]
+  }
+]

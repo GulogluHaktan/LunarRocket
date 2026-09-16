@@ -1,0 +1,1 @@
+Şekil 5, Tablo 2'deki analitik ve mesh-track süreklilik ölçümlerini yöntem başına çubuk grafik olarak görselleştirmektedir; gaussian_shipped'in dört panelin tamamında diğer üç yönteme kıyasla düzenlerce daha yüksek hata çubuğuna sahip olması, tabloda raporlanan büyüklük farkını görsel olarak da doğrulamaktadır.

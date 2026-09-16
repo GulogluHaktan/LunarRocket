@@ -5,7 +5,9 @@ PROJECT_ROOT="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
 ISAACLAB_CACHE="${ISAACLAB_CACHE:-$HOME/docker/isaac-lab}"
 ISAACLAB_HOST_ROOT="${ISAACLAB_HOST_ROOT:-$ISAACLAB_CACHE/IsaacLab}"
 ISAACLAB_REPO="${ISAACLAB_REPO:-https://github.com/isaac-sim/IsaacLab.git}"
-ISAACLAB_REF="${ISAACLAB_REF:-develop}"
+# See scripts/install.sh for why this is pinned instead of "develop".
+ISAACLAB_REF="${ISAACLAB_REF:-v3.0.0-beta2.patch1}"
+ISAACLAB_UPDATE="${ISAACLAB_UPDATE:-0}"
 IMAGE="${ISAAC_SIM_IMAGE:-nvcr.io/nvidia/isaac-sim:6.0.1}"
 LAB_IMAGE="${ISAACLAB_IMAGE:-lunar-rocket-isaaclab:6.0.1}"
 
@@ -16,14 +18,27 @@ CHECKPOINT="${ISAACLAB_CHECKPOINT:-}"
 HEADLESS_FLAG="${ISAACLAB_HEADLESS_FLAG-}"
 VIDEO_FLAG="${ISAACLAB_VIDEO_FLAG-}"
 VIDEO_LENGTH="${ISAACLAB_VIDEO_LENGTH:-600}"
+EVALUATION_STEPS="${ISAACLAB_EVALUATION_STEPS:-}"
 PREVIEW_DURATION="${ISAACLAB_PREVIEW_DURATION:-120}"
 VIZ_FLAG="${ISAACLAB_VIZ_FLAG---viz kit}"
 INSTALL_MODE="${ISAACLAB_INSTALL:-0}"
-TERRAIN_QUALITY="${ISAACLAB_TERRAIN_QUALITY:-high_detail_landing}"
-TERRAIN_LOCAL_RESOLUTION="${ISAACLAB_TERRAIN_LOCAL_RESOLUTION:-512}"
+TERRAIN_QUALITY="${ISAACLAB_TERRAIN_QUALITY:-high_train}"
+TERRAIN_LOCAL_RESOLUTION="${ISAACLAB_TERRAIN_LOCAL_RESOLUTION:-256}"
+TERRAIN_LOCAL_DETAIL="${ISAACLAB_TERRAIN_LOCAL_DETAIL:-0}"
+USE_DEM_TERRAIN="${ISAACLAB_USE_DEM_TERRAIN:-1}"
+TERRAIN_POOL_SIZE="${ISAACLAB_TERRAIN_POOL_SIZE:-15}"
+TERRAIN_POOL_REFRESH_ASSIGNMENTS="${ISAACLAB_TERRAIN_POOL_REFRESH_ASSIGNMENTS:-60}"
+TERRAIN_POOL_USE_DEM="${ISAACLAB_TERRAIN_POOL_USE_DEM:-1}"
+TERRAIN_POOL_DEM_QUALITY="${ISAACLAB_TERRAIN_POOL_DEM_QUALITY:-low_debug}"
 WATCH_SPAWN_ALTITUDE="${ISAACLAB_WATCH_SPAWN_ALTITUDE:-2.5}"
+WATCH_SPAWN_XY_RANGE="${ISAACLAB_WATCH_SPAWN_XY_RANGE:-0.5}"
+WATCH_TARGET_XY_RANGE="${ISAACLAB_WATCH_TARGET_XY_RANGE:-2.0}"
+WATCH_POLICY_GIMBAL_DEG="${ISAACLAB_WATCH_POLICY_GIMBAL_DEG:-}"
+STOCHASTIC_POLICY="${ISAACLAB_STOCHASTIC_POLICY:-0}"
 WATCH_THROTTLE="${ISAACLAB_WATCH_THROTTLE:-0.09}"
+WATCH_CONTROLLER="${ISAACLAB_WATCH_CONTROLLER:-constant}"
 RL_DEPS_ROOT="${ISAAC_DOCKER_CACHE:-$HOME/docker/isaac-sim}/rl_deps_py312"
+ISAAC_CACHE_ROOT="${ISAAC_DOCKER_CACHE:-$HOME/docker/isaac-sim}"
 XHOST_GRANTED="${ISAACLAB_XHOST_GRANTED:-0}"
 
 cleanup_xhost() {
@@ -33,10 +48,17 @@ cleanup_xhost() {
 }
 trap cleanup_xhost EXIT
 
-mkdir -p "$ISAACLAB_CACHE"
+mkdir -p \
+  "$ISAACLAB_CACHE" \
+  "$ISAAC_CACHE_ROOT/cache/ov" \
+  "$ISAAC_CACHE_ROOT/cache/pip" \
+  "$ISAAC_CACHE_ROOT/cache/glcache" \
+  "$ISAAC_CACHE_ROOT/cache/kit" \
+  "$ISAAC_CACHE_ROOT/data" \
+  "$ISAAC_CACHE_ROOT/documents"
 if [[ ! -d "$ISAACLAB_HOST_ROOT/.git" ]]; then
   git clone --depth 1 --branch "$ISAACLAB_REF" "$ISAACLAB_REPO" "$ISAACLAB_HOST_ROOT"
-else
+elif [[ "$ISAACLAB_UPDATE" == "1" || "$ISAACLAB_UPDATE" == "true" ]]; then
   git -C "$ISAACLAB_HOST_ROOT" fetch --depth 1 origin "$ISAACLAB_REF"
   git -C "$ISAACLAB_HOST_ROOT" checkout FETCH_HEAD
 fi
@@ -73,11 +95,34 @@ DOCKER_ARGS=(
   -e SKIP_TRAIN=1
   -e ISAACLAB_TERRAIN_QUALITY="$TERRAIN_QUALITY"
   -e ISAACLAB_TERRAIN_LOCAL_RESOLUTION="$TERRAIN_LOCAL_RESOLUTION"
+  -e ISAACLAB_TERRAIN_LOCAL_DETAIL="$TERRAIN_LOCAL_DETAIL"
+  -e ISAACLAB_USE_DEM_TERRAIN="$USE_DEM_TERRAIN"
+  -e ISAACLAB_TERRAIN_POOL_SIZE="$TERRAIN_POOL_SIZE"
+  -e ISAACLAB_TERRAIN_POOL_REFRESH_ASSIGNMENTS="$TERRAIN_POOL_REFRESH_ASSIGNMENTS"
+  -e ISAACLAB_TERRAIN_POOL_USE_DEM="$TERRAIN_POOL_USE_DEM"
+  -e ISAACLAB_TERRAIN_POOL_DEM_QUALITY="$TERRAIN_POOL_DEM_QUALITY"
   -e ISAACLAB_WATCH_SPAWN_ALTITUDE="$WATCH_SPAWN_ALTITUDE"
-  -e PYTHONPATH=/workspace/isaac_rl_deps/site-packages:/workspace/IsaacLab/source/isaaclab:/workspace/IsaacLab/source/isaaclab_assets:/workspace/IsaacLab/source/isaaclab_tasks:/workspace/IsaacLab/source/isaaclab_rl:/workspace/IsaacLab/source/isaaclab_contrib:/workspace/IsaacLab/source/isaaclab_newton:/workspace/IsaacLab/source/isaaclab_physx:/workspace/IsaacLab/source/isaaclab_ov:/workspace/IsaacLab/source/isaaclab_ovphysx:/workspace/IsaacLab/source/isaaclab_visualizers:/workspace/LunarRocket/source/lunar_rocket_lab:/workspace/LunarRocket
+  -e ISAACLAB_WATCH_SPAWN_XY_RANGE="$WATCH_SPAWN_XY_RANGE"
+  -e ISAACLAB_WATCH_TARGET_XY_RANGE="$WATCH_TARGET_XY_RANGE"
+  -e ISAACLAB_WATCH_POLICY_GIMBAL_DEG="$WATCH_POLICY_GIMBAL_DEG"
+  -e ISAACLAB_STOCHASTIC_POLICY="$STOCHASTIC_POLICY"
+  -e ISAACLAB_DEBUG_ORIENTATION="${ISAACLAB_DEBUG_ORIENTATION:-}"
+  -e ISAACLAB_ADD_SUN_LIGHT="${ISAACLAB_ADD_SUN_LIGHT:-}"
+  -e ISAACLAB_SUN_TILT_DEG="${ISAACLAB_SUN_TILT_DEG:-}"
+  -e ISAACLAB_SUN_INTENSITY="${ISAACLAB_SUN_INTENSITY:-}"
+  -e ISAACLAB_DOME_LIGHT_INTENSITY="${ISAACLAB_DOME_LIGHT_INTENSITY:-}"
+  -e ISAACLAB_WATCH_CAMERA_EYE="${ISAACLAB_WATCH_CAMERA_EYE:-}"
+  -e ISAACLAB_WATCH_CAMERA_TARGET="${ISAACLAB_WATCH_CAMERA_TARGET:-}"
+  -e PYTHONPATH=/isaac-sim/extsDeprecated/omni.isaac.ml_archive/pip_prebundle:/workspace/isaac_rl_deps/site-packages:/workspace/IsaacLab/source/isaaclab:/workspace/IsaacLab/source/isaaclab_assets:/workspace/IsaacLab/source/isaaclab_tasks:/workspace/IsaacLab/source/isaaclab_rl:/workspace/IsaacLab/source/isaaclab_contrib:/workspace/IsaacLab/source/isaaclab_newton:/workspace/IsaacLab/source/isaaclab_physx:/workspace/IsaacLab/source/isaaclab_ov:/workspace/IsaacLab/source/isaaclab_ovphysx:/workspace/IsaacLab/source/isaaclab_visualizers:/workspace/LunarRocket/source/lunar_rocket_lab:/workspace/LunarRocket
   -v "$PROJECT_ROOT:/workspace/LunarRocket"
   -v "$ISAACLAB_HOST_ROOT:/workspace/IsaacLab"
   -v "$RL_DEPS_ROOT:/workspace/isaac_rl_deps"
+  -v "$ISAAC_CACHE_ROOT/cache/ov:/root/.cache/ov"
+  -v "$ISAAC_CACHE_ROOT/cache/pip:/root/.cache/pip"
+  -v "$ISAAC_CACHE_ROOT/cache/glcache:/root/.cache/nvidia"
+  -v "$ISAAC_CACHE_ROOT/cache/kit:/root/.cache/kit"
+  -v "$ISAAC_CACHE_ROOT/data:/root/.local/share/ov"
+  -v "$ISAAC_CACHE_ROOT/documents:/root/Documents"
   -w /workspace/LunarRocket
 )
 
@@ -110,6 +155,9 @@ if [[ -n "$CHECKPOINT" ]]; then
     --video_length "$VIDEO_LENGTH"
   )
   PLAY_ARGS+=(--checkpoint "$CHECKPOINT")
+  if [[ -n "$EVALUATION_STEPS" ]]; then
+    PLAY_ARGS+=(--evaluation_steps "$EVALUATION_STEPS")
+  fi
 else
   PLAY_ARGS=(
     /workspace/IsaacLab/isaaclab.sh -p source/lunar_rocket_lab/scripts/preview_scene.py
@@ -120,6 +168,7 @@ else
     --duration "$PREVIEW_DURATION"
     --spawn_altitude "$WATCH_SPAWN_ALTITUDE"
     --throttle "$WATCH_THROTTLE"
+    --controller "$WATCH_CONTROLLER"
   )
 fi
 if [[ -n "$HEADLESS_FLAG" ]]; then

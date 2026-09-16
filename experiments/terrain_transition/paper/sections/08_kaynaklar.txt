@@ -1,0 +1,35 @@
+Barker, M. K., Mazarico, E., Neumann, G. A., Zuber, M. T., Haruyama, J., & Smith, D. E. (2016). A new lunar digital elevation model from the Lunar Orbiter Laser Altimeter and SELENE Terrain Camera. Icarus, 273, 346-355. https://doi.org/10.1016/j.icarus.2015.07.039
+
+de Boer, W. H. (2000). Fast terrain rendering using geometrical mipmapping (E-mersion Project technical report). https://www.flipcode.com/archives/article_geomipmaps.pdf
+
+Duchaineau, M., Wolinsky, M., Sigeti, D. E., Miller, M. C., Aldrich, C., & Mineev-Weinstein, M. B. (1997). ROAMing terrain: Real-time optimally adapting meshes. Proceedings of the 8th IEEE Conference on Visualization (VIS '97), 81-88. https://ieeexplore.ieee.org/document/663860/
+
+Ebert, D. S., Musgrave, F. K., Peachey, D., Perlin, K., Worley, S., Mark, W. R., & Hart, J. C. (2002). Texturing and modeling: A procedural approach (3rd ed.). Morgan Kaufmann.
+
+Haarnoja, T., Zhou, A., Abbeel, P., & Levine, S. (2018). Soft actor-critic: Off-policy maximum entropy deep reinforcement learning with a stochastic actor. Proceedings of the 35th International Conference on Machine Learning (ICML), PMLR 80, 1861-1870. https://proceedings.mlr.press/v80/haarnoja18b.html
+
+Hardy, R. L. (1971). Multiquadric equations of topography and other irregular surfaces. Journal of Geophysical Research, 76(8), 1905-1915. https://doi.org/10.1029/JB076i008p01905
+
+Henderson, P., Islam, R., Bachman, P., Pineau, J., Precup, D., & Meger, D. (2018). Deep reinforcement learning that matters. Proceedings of the AAAI Conference on Artificial Intelligence, 32(1), 3207-3214. https://doi.org/10.1609/aaai.v32i1.11694
+
+Ishida, T., Fukuda, S., Kariya, K., Kamata, H., Takadama, K., Kojima, H., Sawai, S., & Sakai, S. (2025). Vision-based navigation and obstacle detection flight results in SLIM lunar landing. Acta Astronautica, 226, 772-781. https://doi.org/10.1016/j.actaastro.2024.11.002
+
+Johnson, A. E., & Montgomery, J. F. (2008). Overview of terrain relative navigation approaches for precise lunar landing. 2008 IEEE Aerospace Conference, 1-10. https://doi.org/10.1109/AERO.2008.4526302
+
+Losasso, F., & Hoppe, H. (2004). Geometry clipmaps: Terrain rendering using nested regular grids. ACM Transactions on Graphics, 23(3), 769-776. https://doi.org/10.1145/1015706.1015799
+
+Mittal, M., Yu, C., Yu, Q., Liu, J., Rudin, N., Hoeller, D., Yuan, J. L., Singh, R., Guo, Y., Mazhar, H., Mandlekar, A., Babich, B., State, G., Hutter, M., & Garg, A. (2023). Orbit: A unified simulation framework for interactive robot learning environments. IEEE Robotics and Automation Letters, 8(6), 3740-3747. https://doi.org/10.1109/LRA.2023.3270034
+
+NASA Jet Propulsion Laboratory. (n.d.). ALHAT: Autonomous Landing and Hazard Avoidance Technology. JPL Robotics. https://www-robotics.jpl.nasa.gov/what-we-do/research-tasks/alhat-autonomous-landing-and-hazard-avoidance-technology/
+
+NVIDIA. (2025). Isaac Lab: A GPU-accelerated simulation framework for multi-modal robot learning. arXiv:2511.04831. https://arxiv.org/abs/2511.04831
+
+Ohtake, Y., Belyaev, A., & Seidel, H.-P. (2003). A multi-scale approach to 3D scattered data interpolation with compactly supported basis functions. Proceedings of the 2003 Shape Modeling International (SMI '03), 153-161. https://ieeexplore.ieee.org/document/1199611/
+
+Raffin, A., Hill, A., Gleave, A., Kanervisto, A., Ernestus, M., & Dormann, N. (2021). Stable-Baselines3: Reliable reinforcement learning implementations. Journal of Machine Learning Research, 22(268), 1-8. http://jmlr.org/papers/v22/20-1364.html
+
+Rudin, N., Hoeller, D., Reist, P., & Hutter, M. (2022). Learning to walk in minutes using massively parallel deep reinforcement learning. Proceedings of the 5th Conference on Robot Learning (CoRL 2022), PMLR 164, 91-100. https://proceedings.mlr.press/v164/rudin22a.html
+
+Tobin, J., Fong, R., Ray, A., Schneider, J., Zaremba, W., & Abbeel, P. (2017). Domain randomization for transferring deep neural networks from simulation to the real world. 2017 IEEE/RSJ International Conference on Intelligent Robots and Systems (IROS), 23-30. https://doi.org/10.1109/IROS.2017.8202133
+
+Wendland, H. (1995). Piecewise polynomial, positive definite and compactly supported radial basis functions of minimal degree. Advances in Computational Mathematics, 4(1), 389-396. https://doi.org/10.1007/BF02123482

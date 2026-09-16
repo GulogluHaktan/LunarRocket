@@ -1,0 +1,1 @@
+Bu bölüm, önerilen hibrit yöntemin dört tasarım parametresine (temas yarıçapı, switch genişliği, geçiş yarıçapı, grid çözünürlüğü) karşı sağlamlığını sınayan dört ayrı ablasyon analizini sunmaktadır.

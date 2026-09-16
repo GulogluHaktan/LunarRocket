@@ -4,16 +4,27 @@ n_timesteps: !!float 5e6
 steps_per_iteration: 32
 policy: "MlpPolicy"
 normalize_input: true
-normalize_value: false
+# Terminal rewards span +300/-220 and dense per-step terms accumulate to
+# +/-1000+ per episode. Left unnormalized this collapsed ent_coef from 0.85
+# to 0.025 within ~50k steps (actor going deterministic before it had learned
+# anything), because the value/critic targets dominate the SAC update scale.
+normalize_value: true
 clip_obs: 10.0
 buffer_size: 1000000
 learning_starts: 16384
-batch_size: 2048
+batch_size: 1024
 tau: 0.005
 gamma: 0.99
 train_freq: 1
-gradient_steps: 1
+# A vector step contributes 512 transitions at the default env count.  One
+# update per vector step severely under-trains SAC; 32 gives the curriculum
+# enough policy updates while retaining parallel simulation throughput.
+gradient_steps: 32
 ent_coef: "auto"
+# Default target entropy is -action_dim (-3); that pushed entropy down hard and
+# fast alongside the unnormalized reward scale above. -1.5 keeps meaningfully
+# more exploration through the early curriculum stages.
+target_entropy: -1.5
 target_update_interval: 1
 learning_rate: !!float 3e-4
 policy_kwargs:

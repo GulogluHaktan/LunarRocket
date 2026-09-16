@@ -1,0 +1,1 @@
+Sample-efficiency ölçütlerinde de benzer bir görünüm vardır: AUC (eğitim boyunca ortalama başarı oranı) yöntem başına üç tohum arasında geniş bir aralıkta değişmektedir (smoothstep 0,381-0,395, Gauss 0,366-0,402, hibrid 0,339-0,399) ve yöntemler arası fark, tohumlar arası farktan belirgin biçimde küçüktür -bu da yine tohum varyansının baskın kaynak olduğuna işaret etmektedir.

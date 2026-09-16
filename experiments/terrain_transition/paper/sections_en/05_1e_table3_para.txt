@@ -1,0 +1,1 @@
+Table 4 shows the memory estimate for the two mesh accounting schemes; this estimate depends only on the mesh geometry (vertex count), and the shape of the blending method has no measurable effect on VRAM -- the real VRAM lever is the mesh topology choice (two-mesh versus single-grid), not the choice of blending function.

@@ -1,0 +1,5 @@
+Method,Cost (microseconds/query)
+smoothstep,93.12
+gaussian_shipped,148.84
+gaussian_calibrated,149.61
+hybrid,407.83

@@ -1,0 +1,41 @@
+Grup,Parametre,Değer
+Fizik / simülasyon,Fizik motoru,NVIDIA PhysX 5 (GPU ardışık düzeni)
+,Simülasyon adımı (dt),1/120 s (120 Hz)
+,Kontrol frekansı (decimation = 2),60 Hz
+,Bölüm süresi,20 s (1200 kontrol adımı)
+,Yerçekimi,"0, 0, -1.62 m/s²"
+,Paralel ortam sayısı,512
+,Ortam aralığı (env_spacing),90 m
+,Fizik kopyalama,replicate_physics + clone_in_fabric (açık)
+,Sürtünme (statik / dinamik),0.85 / 0.65 (combine: multiply)
+,Restitüsyon,0.02
+Araç ve tahrik,Araç kütlesi,1.66 kg (1.63 gövde + gimbal bağlantıları)
+,Maksimum itki,30 N
+,Maksimum komut throttle,0.35 (≈ 10.5 N etkin)
+,Fiziksel gimbal limiti,±25° (mekanik sert durdurucu)
+,Politika gimbal zarfı,4°–8° (müfredat zorluğuyla ölçeklenir)
+,İtki kaldıraç kolu,0.25 m
+,TVC aktüatör (implicit),"effort 2.5, stiffness 10, damping 0.1, armature 0.002"
+,Gözlem / eylem boyutu,125 / 3
+,Başlangıç irtifası,25 m (dik yönelim)
+RL eğitimi (SB3 SAC),Politika ağı,"MLP [384, 256, 128], ELU"
+,Replay buffer,1 000 000
+,learning_starts,16 384
+,Batch boyutu,1024
+,Öğrenme oranı,3e-4
+,γ / τ,0.99 / 0.005
+,train_freq / gradient_steps,1 / 32
+,Entropi katsayısı,otomatik (target_entropy = -1.5)
+,Normalizasyon,"normalize_input + normalize_value açık, clip_obs = 10"
+,Karşılaştırma bütçesi,350 iter × 32 × 512 ≈ 5.73 M ortam adımı
+,Tohumlar,"42, 7, 123 (yöntem başına n = 3, ardışık)"
+,Cihaz,tek GPU (cuda:0)
+Karıştırma parametreleri,Geçiş yarıçapı (R),8.0 m
+,Yöntem seçenekleri,smoothstep / gaussian / hybrid (ISAACLAB_TERRAIN_BLEND_METHOD)
+,Kalibre Gauss katsayısı (k),ln(1000) ≈ 6.9078
+,Hibrit temas yarıçapı (r_c),1.5 m
+,Hibrit switch genişliği (w),0.3 m
+,İnce-detay genlik aralığı,0.006–0.020 m
+,Makro yükseklik / eğim ölçeği,0.45 m / 0.035
+,Krater / kaya sayısı (bölüm başına),3 / 5
+,Terrain havuzu (boyut / yenileme),15 yuva / 60 atama

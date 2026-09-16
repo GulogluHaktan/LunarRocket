@@ -5,31 +5,169 @@ from pathlib import Path
 
 
 ROOT = Path(__file__).resolve().parents[1]
-ENV_SOURCE = ROOT / "source/lunar_rocket_lab/lunar_rocket_lab/tasks/direct/lunar_lander/lunar_lander_env.py"
+_LUNAR_LANDER_DIR = ROOT / "source/lunar_rocket_lab/lunar_rocket_lab/tasks/direct/lunar_lander"
+ENV_SOURCE = _LUNAR_LANDER_DIR / "lunar_lander_env.py"
+# LunarLanderEnvCfg lives in its own module, separate from the runtime env
+# class (Isaac Lab convention -- see lunar_lander_env.py's import comment):
+# gym.register's env_cfg_entry_point must resolve without ever importing
+# DirectRLEnv/pxr. Most assertions below don't care which of the two files a
+# literal lives in, so tests read the concatenation of both.
+CFG_SOURCE = _LUNAR_LANDER_DIR / "lunar_lander_env_cfg.py"
+TASK_INIT = _LUNAR_LANDER_DIR / "__init__.py"
+TRAIN_SAC_SOURCE = ROOT / "source/lunar_rocket_lab/scripts/train_sac.py"
+
+
+def _combined_env_source() -> str:
+    return ENV_SOURCE.read_text() + "\n" + CFG_SOURCE.read_text()
 
 
 class IsaacLabStaticTests(unittest.TestCase):
     def test_isaaclab_env_uses_terrain_relative_observations_and_dones(self) -> None:
-        source = ENV_SOURCE.read_text()
+        source = _combined_env_source()
 
-        self.assertIn("observation_space = 123", source)
-        self.assertIn("terrain_height = self._terrain_height(pos[:, :2])", source)
-        self.assertIn("altitude = pos[:, 2] - terrain_height", source)
+        self.assertIn("observation_space = 125", source)
+        self.assertIn("foot_clearances = self._foot_clearances(pos, quat)", source)
+        self.assertIn("altitude = torch.amin(foot_clearances, dim=-1)", source)
         self.assertIn("terrain_metrics = self._terrain_metrics", source)
         self.assertIn("lidar = self._lidar_ranges", source)
         self.assertIn("terrain_scan = self._terrain_scan", source)
         self.assertIn("sensor_features = self._sensor_features", source)
         self.assertIn("lidar_ray_count = 64", source)
+        self.assertIn("rocket_ground_clearance_m = 0.38", source)
+        self.assertIn("rocket_foot_radius_m = 0.025", source)
+        self.assertIn("def _upright_root_height(", source)
+        self.assertIn("foot_clearance_spread <= self.cfg.landing_max_foot_clearance_m", source)
 
     def test_isaaclab_thrust_is_body_frame_and_generates_torque(self) -> None:
-        source = ENV_SOURCE.read_text()
+        source = _combined_env_source()
 
         self.assertIn("thrust_dir_b", source)
         self.assertIn("thrust_dir_w = _quat_rotate(quat, thrust_dir_b)", source)
+        self.assertIn("self._rocket.data.joint_pos", source)
+        self.assertIn("torch.sin(pitch_y)", source)
         self.assertIn("torch.cross(lever_w, force_w", source)
+        self.assertIn("is_global=True", source)
+        self.assertIn("hover_throttle * (raw_throttle + 1.0)", source)
+        self.assertIn("max_commanded_throttle = 0.35", source)
 
-    def test_isaaclab_manual_rocket_spawn_uses_concrete_source_prim(self) -> None:
-        source = ENV_SOURCE.read_text()
+    def test_reward_is_progress_based_and_logs_completed_episodes(self) -> None:
+        source = _combined_env_source()
 
+        self.assertNotIn("rew_target =", source)
+        self.assertIn("self._previous_altitude - altitude", source)
+        self.assertIn("horizontal_velocity_error", source)
+        self.assertIn("desired_horizontal_velocity", source)
+        self.assertIn("desired_vertical_speed", source)
+        self.assertIn("dt = float(self.step_dt)", source)
+        self.assertIn("curriculum_success_threshold", source)
+        self.assertIn("policy_max_gimbal_deg = 8.0", source)
+        self.assertIn("self.cfg.rew_gimbal", source)
+        self.assertIn('log["Curriculum/difficulty"]', source)
+        self.assertIn('log["Metrics/success_rate"]', source)
+        self.assertIn('terms["terminal"] = terminal', source)
+
+    def test_isaaclab_uses_exact_xml_derived_articulation(self) -> None:
+        source = _combined_env_source()
+
+        self.assertIn('assets/rocket/hopper_lunar.usd', source)
+        self.assertIn("scale=(1.0, 1.0, 1.0)", source)
         self.assertIn('rocket_cfg.spawn.spawn_path = "/World/envs/env_0/Rocket"', source)
-        self.assertIn("self._rocket = RigidObject(rocket_cfg)", source)
+        self.assertIn("self._rocket = Articulation(rocket_cfg)", source)
+        self.assertIn('joint_names_expr=["tvc_.*_joint"]', source)
+        self.assertIn('find_bodies("hopper")', source)
+        self.assertNotIn("PreviewLandingPad", source)
+        self.assertNotIn("PreviewLandingTarget", source)
+        self.assertNotIn("ViewportBody", source)
+
+    def test_episode_terrain_randomization_preserves_natural_target_surface(self) -> None:
+        source = _combined_env_source()
+
+        self.assertIn("self._randomize_terrain(env_ids, origins[:, :2])", source)
+        self.assertIn("self._maybe_swap_terrain_pool()", source)
+        self.assertIn("ThreadPoolExecutor", source)
+        self.assertIn('self._terrain_pool["crater_xy"][slots]', source)
+        self.assertIn('self._terrain_pool["base_height"][slots]', source)
+        self.assertIn("NASA_DEM=", source)
+        self.assertIn("target_xy = origins[:, :2] + target_offset", source)
+        self.assertIn("return raw_height + self._local_detail_height", source)
+        self.assertNotIn("center_height + blend * (raw_height - center_height)", source)
+        self.assertIn("def _local_detail_height(", source)
+        self.assertIn("ISAACLAB_USE_DEM_TERRAIN", source)
+        self.assertIn("repeat_interleave(samples_per_env)", source)
+        self.assertNotIn("self._procedural_height_raw(origin_xy, env_ids)", source)
+
+    def test_physics_domain_randomization_covers_mass_and_thrust_per_env(self) -> None:
+        source = _combined_env_source()
+
+        self.assertIn("physics_randomization_enabled = True", source)
+        self.assertIn("mass_randomization_range = (0.85, 1.15)", source)
+        self.assertIn("thrust_randomization_range = (0.85, 1.15)", source)
+        self.assertIn(
+            'self._rocket_mass_kg = torch.full((self.num_envs,), float(cfg.rocket_mass_kg), device=self.device)',
+            source,
+        )
+        self.assertIn(
+            'self._max_thrust_n = torch.full((self.num_envs,), float(cfg.max_thrust_n), device=self.device)',
+            source,
+        )
+        # Every physics consumer must read the per-env tensor, never the cfg
+        # scalar directly -- otherwise the randomization is sampled but unused.
+        self.assertNotIn("/ self.cfg.rocket_mass_kg", source)
+        self.assertNotIn("* self.cfg.max_thrust_n", source)
+        self.assertIn("hover_throttle = self._rocket_mass_kg * abs(float(self.cfg.sim.gravity[2])) / self._max_thrust_n", source)
+        self.assertIn("force_w = thrust_dir_w * (self._actions[:, 0:1] * self._max_thrust_n.unsqueeze(-1))", source)
+        self.assertIn("actual_thrust_acceleration = self._forces[:, 0, :] / self._rocket_mass_kg.unsqueeze(-1)", source)
+
+    def test_residual_action_is_a_disabled_by_default_scaffold(self) -> None:
+        source = _combined_env_source()
+
+        self.assertIn("use_residual_action = False", source)
+        self.assertIn("residual_gain = 0.35", source)
+        # The guard must be the first thing _pre_physics_step does, so the
+        # existing end-to-end action path is untouched (bit-identical) while
+        # the flag stays False -- it is the A/B baseline for B1.
+        pre_physics_step = source.split("def _pre_physics_step(self, actions: torch.Tensor) -> None:")[1]
+        guard, _, rest = pre_physics_step.partition("self._prev_actions.copy_(self._actions)")
+        self.assertIn("if self.cfg.use_residual_action:", guard)
+        self.assertIn("raise NotImplementedError", guard)
+
+    def test_lidar_ablation_zeroes_signal_without_changing_observation_space(self) -> None:
+        source = _combined_env_source()
+
+        self.assertIn('os.environ.get("ISAACLAB_ABLATE_LIDAR", "0")', source)
+        self.assertIn("if self._ablate_lidar:", source)
+        self.assertIn("lidar = torch.zeros_like(lidar)", source)
+        # The ablation must not shrink the observation tensor -- only zero its
+        # content -- so a B2 comparison run (R2) is architecture-identical to
+        # the baseline (R0) and isolates the information-content variable.
+        self.assertIn("observation_space = 125", source)
+
+    def test_td3_and_ddpg_algo_arms_are_registered_and_selectable(self) -> None:
+        task_init = TASK_INIT.read_text()
+        train_sac_source = TRAIN_SAC_SOURCE.read_text()
+
+        self.assertIn('"sb3_td3_cfg_entry_point": f"{agents.__name__}:sb3_td3_cfg.yaml"', task_init)
+        self.assertIn('"sb3_ddpg_cfg_entry_point": f"{agents.__name__}:sb3_ddpg_cfg.yaml"', task_init)
+        self.assertTrue((ROOT / "source/lunar_rocket_lab/lunar_rocket_lab/tasks/direct/lunar_lander/agents/sb3_td3_cfg.yaml").exists())
+        self.assertTrue((ROOT / "source/lunar_rocket_lab/lunar_rocket_lab/tasks/direct/lunar_lander/agents/sb3_ddpg_cfg.yaml").exists())
+        # train_sac.py must select the SB3 algorithm class from the agent
+        # config's "algo" key (SAC config has none -> defaults to SAC), not
+        # hardcode SAC, or the new yaml arms silently still train SAC.
+        self.assertIn('from stable_baselines3 import DDPG, SAC, TD3', train_sac_source)
+        self.assertIn('agent_cfg.pop("algo", "SAC")', train_sac_source)
+        self.assertIn('algo_classes = {"SAC": SAC, "TD3": TD3, "DDPG": DDPG}', train_sac_source)
+        self.assertIn("algo_cls = algo_classes[algo_name]", train_sac_source)
+        self.assertNotIn("agent = SAC(policy_arch", train_sac_source)
+
+    def test_default_training_configuration_uses_the_gpu_terrain_pool(self) -> None:
+        # The real USD/DEM mesh only ever spawns up to legacy_terrain_usd_max_envs
+        # (16) envs; at higher env counts it silently falls back to a ground
+        # plane with zero terrain variety. The GPU terrain-pool path is what
+        # reward/termination/observations actually use, so it must be the
+        # default, at a high env count for SAC's update-to-data ratio.
+        train_script = (ROOT / "scripts/train_isaaclab_docker.sh").read_text()
+
+        self.assertIn('NUM_ENVS="${ISAACLAB_NUM_ENVS:-512}"', train_script)
+        self.assertIn('TERRAIN_LOCAL_DETAIL="${ISAACLAB_TERRAIN_LOCAL_DETAIL:-0}"', train_script)
+        self.assertIn('USE_DEM_TERRAIN="${ISAACLAB_USE_DEM_TERRAIN:-0}"', train_script)
+        self.assertIn("-e ISAACLAB_USE_DEM_TERRAIN=", train_script)

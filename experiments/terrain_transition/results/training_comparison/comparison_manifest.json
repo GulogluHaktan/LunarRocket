@@ -1,0 +1,5 @@
+{
+  "smoothstep": {"run_dir": "2026-08-28_10-10-34", "wall_seconds": 2490, "status": "ok"},
+  "gaussian": {"run_dir": "2026-08-28_10-52-04", "wall_seconds": 3887, "status": "ok"},
+  "hybrid": {"run_dir": "2026-08-28_11-56-49", "wall_seconds": 3366, "status": "ok"}
+}

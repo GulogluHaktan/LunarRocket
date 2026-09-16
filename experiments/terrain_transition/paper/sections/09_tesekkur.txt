@@ -1,0 +1,1 @@
+Bu çalışma, harici bir fon veya kurumsal destek almaksızın, yazarın kendi hesaplama kaynakları (yerel NVIDIA GPU iş istasyonu) kullanılarak gerçekleştirilmiştir. Yazar, Isaac Lab ve Isaac Sim'i açık kaynaklı olarak geliştiren NVIDIA ekibine ve deney altyapısında kullanılan açık kaynaklı yazılım kütüphanelerine (Stable-Baselines3, PyTorch, NumPy, SciPy, TensorBoard) teşekkür eder.

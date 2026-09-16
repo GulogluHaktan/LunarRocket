@@ -1,0 +1,1 @@
+Tablo 4, iki mesh muhasebe biçimi için bellek tahminini göstermektedir; bu tahmin yalnızca ağ geometrisine (vertex sayısı) bağlıdır ve karıştırma yönteminin şekli VRAM üzerinde ölçülebilir bir etki yaratmamaktadır -gerçek VRAM kaldıracı, karıştırma fonksiyonu seçimi değil, ağ topolojisi tercihidir (iki-mesh'e karşı tek-grid).

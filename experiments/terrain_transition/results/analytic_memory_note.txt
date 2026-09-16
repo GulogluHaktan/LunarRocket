@@ -1,0 +1,1 @@
+Analytic-track per-env terrain-parameter memory is identical across all methods: 42 floats/env = 168 bytes/env (method-independent; the blend function reads these same parameters, it does not add any of its own).

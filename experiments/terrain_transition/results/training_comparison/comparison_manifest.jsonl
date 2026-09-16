@@ -1,0 +1,9 @@
+{"method": "smoothstep", "seed": 42, "run_dir": "2026-08-28_10-10-34", "wall_seconds": 2490, "status": "ok"}
+{"method": "gaussian", "seed": 42, "run_dir": "2026-08-28_10-52-04", "wall_seconds": 3887, "status": "ok"}
+{"method": "hybrid", "seed": 42, "run_dir": "2026-08-28_11-56-49", "wall_seconds": 3366, "status": "ok"}
+{"method": "smoothstep", "seed": 7, "run_dir": "2026-08-28_15-13-01", "wall_seconds": 2318, "status": "ok"}
+{"method": "gaussian", "seed": 7, "run_dir": "2026-08-28_15-51-40", "wall_seconds": 2345, "status": "ok"}
+{"method": "hybrid", "seed": 7, "run_dir": "2026-08-28_16-30-44", "wall_seconds": 2326, "status": "ok"}
+{"method": "smoothstep", "seed": 123, "run_dir": "2026-08-28_17-09-30", "wall_seconds": 2323, "status": "ok"}
+{"method": "gaussian", "seed": 123, "run_dir": "2026-08-28_17-48-14", "wall_seconds": 2319, "status": "ok"}
+{"method": "hybrid", "seed": 123, "run_dir": "2026-08-28_18-26-52", "wall_seconds": 2330, "status": "ok"}

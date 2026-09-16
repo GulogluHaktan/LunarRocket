@@ -1,0 +1,23 @@
+Headline (detail-only seam continuity, isolated from macro-terrain roughness):
+method                mesh_t_ms  mesh_seamC0_m  mesh_seamC1_deg  an_seamC0_m  an_seamC1_deg          q/s  2mesh_MB  1grid_MB
+----------------------------------------------------------------------------------------------------------------------------
+smoothstep                5.638       0.000004           0.0020     0.000001         0.0012    3,123,530      5.24      1.05
+gaussian_shipped          6.060       0.000210           0.0752     0.001719         0.6660    3,022,456      5.24      1.05
+gaussian_calibrated       5.983       0.000001           0.0004     0.000005         0.0020    3,042,935      5.24      1.05
+hybrid                    5.762       0.000004           0.0020     0.000001         0.0012    3,016,785      5.24      1.05
+
+Fade-formula-only cost (isolated from macro/fine terrain evaluation):
+method                fade_only_us
+----------------------------------
+smoothstep                   93.12
+gaussian_shipped            148.84
+gaussian_calibrated         149.61
+hybrid                      407.83
+
+Secondary (combined macro+detail continuity, what a foot/LiDAR ray actually sees):
+method                mesh_C0rms_m  mesh_C1rms_deg  an_C0rms_m  an_C1rms_deg
+----------------------------------------------------------------------------
+smoothstep                0.006259          0.8330    0.006413        0.4230
+gaussian_shipped          0.006265          0.8363    0.006664        0.7987
+gaussian_calibrated       0.006259          0.8330    0.006413        0.4230
+hybrid                    0.006259          0.8330    0.006413        0.4230

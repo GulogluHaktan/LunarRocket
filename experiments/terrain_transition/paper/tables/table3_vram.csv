@@ -1,0 +1,3 @@
+Mesh accounting scheme,Estimated memory (MB)
+Two-mesh (literal: separate global + local meshes),5.24
+Single-grid (baked: one combined mesh),1.05

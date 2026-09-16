@@ -1,0 +1,1 @@
+Bu bölüm, sınır sürekliliği ve hesaplama maliyeti bulgularını, ardından dört ablasyon analizinin sonuçlarını ve son olarak gerçek Isaac Sim eğitim karşılaştırmasının sonuçlarını sunmaktadır. Yöntem tekrarı yapılmamış, veri/deney tasarımı ayrıntıları Bölüm 3'e bırakılmıştır.

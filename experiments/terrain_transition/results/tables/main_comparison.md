@@ -1,0 +1,6 @@
+| method | mesh gen (ms) | mesh seam C0 (m) | mesh seam C1 (deg) | analytic seam C0 (m) | analytic seam C1 (deg) | query throughput (q/s) | fade-only (us) | two-mesh VRAM (MB) | single-grid VRAM (MB) |
+|---|---|---|---|---|---|---|---|---|---|
+| smoothstep | 5.638 | 4.02e-06 | 0.0020 | 5.39e-07 | 0.0012 | 3,123,530 | 93.1 | 5.24 | 1.05 |
+| gaussian_shipped | 6.060 | 2.10e-04 | 0.0752 | 1.72e-03 | 0.6660 | 3,022,456 | 148.8 | 5.24 | 1.05 |
+| gaussian_calibrated | 5.983 | 9.72e-07 | 0.0004 | 5.03e-06 | 0.0020 | 3,042,935 | 149.6 | 5.24 | 1.05 |
+| hybrid | 5.762 | 4.02e-06 | 0.0020 | 5.39e-07 | 0.0012 | 3,016,785 | 407.8 | 5.24 | 1.05 |

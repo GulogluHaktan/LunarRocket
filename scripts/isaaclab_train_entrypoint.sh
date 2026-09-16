@@ -9,6 +9,8 @@ NUM_ENVS="${NUM_ENVS:-16}"
 MAX_ITERATIONS="${MAX_ITERATIONS:-200}"
 DEVICE="${DEVICE:-cuda:0}"
 LOG_INTERVAL="${LOG_INTERVAL:-10000}"
+CHECKPOINT="${CHECKPOINT:-}"
+SEED="${SEED:-}"
 HEADLESS_FLAG="${HEADLESS_FLAG:---headless}"
 INSTALL_MODE="${INSTALL_MODE:-0}"
 SKIP_TRAIN="${SKIP_TRAIN:-0}"
@@ -31,10 +33,15 @@ remove_torch_cache() {
     "$DEPS_DIR"/functorch
 }
 
+# Never let a pip-installed CPU wheel in the reusable RL dependency cache
+# shadow Isaac Sim's CUDA-enabled PyTorch after Kit rewrites sys.path.
+if [[ -e "$DEPS_DIR/torch" || -e /workspace/isaac_rl_deps/torch ]]; then
+  echo "[LunarRocket] removing cached PyTorch shadow; using Isaac Sim CUDA PyTorch"
+  remove_torch_cache
+fi
+
 torch_cuda_ok() {
   /isaac-sim/python.sh - <<'PY'
-import sys
-sys.path.insert(0, '/isaac-sim/extsDeprecated/omni.isaac.ml_archive/pip_prebundle')
 import torch
 assert hasattr(torch._C, "_cuda_setDevice")
 assert torch.cuda.is_available()
@@ -43,7 +50,7 @@ PY
 
 deps_ok() {
   /isaac-sim/python.sh - <<'PY'
-import hydra, tensorboard, toml, tqdm, rich, flatdict, lazy_loader, warp, prettytable
+import hydra, tensorboard, toml, tqdm, rich, flatdict, lazy_loader, warp, prettytable, moviepy
 import isaaclab_visualizers
 import PIL, requests, yaml
 import gymnasium as gym
@@ -74,7 +81,7 @@ else
       --upgrade \
       --no-cache-dir \
       hydra-core tensorboard toml tqdm rich flatdict lazy_loader warp-lang prettytable \
-      requests pillow pyyaml \
+      requests pillow pyyaml moviepy imageio-ffmpeg \
       "gymnasium>=1.2.0" "protobuf>=4.25.8,!=5.26.0" "packaging<24"
     /isaac-sim/python.sh -m pip install \
       --target "$DEPS_DIR" \
@@ -92,11 +99,22 @@ if [[ "$SKIP_TRAIN" == "1" || "$SKIP_TRAIN" == "true" ]]; then
 fi
 
 cd /workspace/LunarRocket
-/workspace/IsaacLab/isaaclab.sh -p "$TRAIN_SCRIPT" \
+TRAIN_ARGS=(
+  /workspace/IsaacLab/isaaclab.sh -p "$TRAIN_SCRIPT"
   --task "$TASK" \
   --agent "$AGENT_ENTRY" \
   --num_envs "$NUM_ENVS" \
   --max_iterations "$MAX_ITERATIONS" \
   --device "$DEVICE" \
-  --log_interval "$LOG_INTERVAL" \
-  $HEADLESS_FLAG
+  --log_interval "$LOG_INTERVAL"
+)
+if [[ -n "$CHECKPOINT" ]]; then
+  TRAIN_ARGS+=(--checkpoint "$CHECKPOINT")
+fi
+if [[ -n "$SEED" ]]; then
+  TRAIN_ARGS+=(--seed "$SEED")
+fi
+if [[ -n "$HEADLESS_FLAG" ]]; then
+  TRAIN_ARGS+=($HEADLESS_FLAG)
+fi
+"${TRAIN_ARGS[@]}"

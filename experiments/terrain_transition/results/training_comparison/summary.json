@@ -1,0 +1,92 @@
+[
+  {
+    "method": "smoothstep",
+    "seed": 42,
+    "wall_seconds": 2490,
+    "final_success_rate": 0.2382,
+    "total_steps": 5734400,
+    "final_timeout_rate": 0.5566,
+    "final_harsh_landing_rate": 0.2038,
+    "final_difficulty": 0.3
+  },
+  {
+    "method": "smoothstep",
+    "seed": 7,
+    "wall_seconds": 2318,
+    "final_success_rate": 0.2553,
+    "total_steps": 5734400,
+    "final_timeout_rate": 0.5002,
+    "final_harsh_landing_rate": 0.2445,
+    "final_difficulty": 0.2768
+  },
+  {
+    "method": "smoothstep",
+    "seed": 123,
+    "wall_seconds": 2323,
+    "final_success_rate": 0.3407,
+    "total_steps": 5734400,
+    "final_timeout_rate": 0.4392,
+    "final_harsh_landing_rate": 0.2114,
+    "final_difficulty": 0.25
+  },
+  {
+    "method": "gaussian",
+    "seed": 42,
+    "wall_seconds": 3887,
+    "final_success_rate": 0.3495,
+    "total_steps": 5734400,
+    "final_timeout_rate": 0.4583,
+    "final_harsh_landing_rate": 0.1863,
+    "final_difficulty": 0.25
+  },
+  {
+    "method": "gaussian",
+    "seed": 7,
+    "wall_seconds": 2345,
+    "final_success_rate": 0.3596,
+    "total_steps": 5734400,
+    "final_timeout_rate": 0.3779,
+    "final_harsh_landing_rate": 0.2604,
+    "final_difficulty": 0.25
+  },
+  {
+    "method": "gaussian",
+    "seed": 123,
+    "wall_seconds": 2319,
+    "final_success_rate": 0.2663,
+    "total_steps": 5734400,
+    "final_timeout_rate": 0.5258,
+    "final_harsh_landing_rate": 0.207,
+    "final_difficulty": 0.25
+  },
+  {
+    "method": "hybrid",
+    "seed": 42,
+    "wall_seconds": 3366,
+    "final_success_rate": 0.2943,
+    "total_steps": 5734400,
+    "final_timeout_rate": 0.4949,
+    "final_harsh_landing_rate": 0.2099,
+    "final_difficulty": 0.2801
+  },
+  {
+    "method": "hybrid",
+    "seed": 7,
+    "wall_seconds": 2326,
+    "final_success_rate": 0.2447,
+    "total_steps": 5734400,
+    "final_timeout_rate": 0.532,
+    "final_harsh_landing_rate": 0.2219,
+    "final_difficulty": 0.25
+  },
+  {
+    "method": "hybrid",
+    "seed": 123,
+    "wall_seconds": 2330,
+    "final_success_rate": 0.2664,
+    "total_steps": 5734400,
+    "final_timeout_rate": 0.5174,
+    "final_harsh_landing_rate": 0.2088,
+    "final_difficulty": 0.25
+  }
+]

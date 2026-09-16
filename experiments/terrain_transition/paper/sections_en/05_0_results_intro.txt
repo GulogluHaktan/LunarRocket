@@ -1,0 +1,1 @@
+This section presents the boundary-continuity and computational-cost findings, then the results of the four ablation analyses, and finally the results of the real Isaac Sim training comparison. No method is repeated; the data/experimental-design details are left to Section 3.

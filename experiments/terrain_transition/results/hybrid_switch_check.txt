@@ -1,0 +1,1 @@
+Hybrid internal switch-boundary check on fade_hybrid(r) itself at r=Rc=1.5m (pure 1D, decoupled from the fine layer's own spatial variation): |fade(Rc+eps)-fade(Rc-eps)|=8.65e-05, slope discontinuity=1.32e-04 (both near machine precision, confirming the switch introduces no new seam in the fade weight itself).

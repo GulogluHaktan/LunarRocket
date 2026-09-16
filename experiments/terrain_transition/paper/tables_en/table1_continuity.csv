@@ -1,0 +1,5 @@
+Method,C0 ratio (relative to smoothstep),C1 ratio (relative to smoothstep),Wilcoxon p,n (seeds)
+smoothstep (reference),1.0,1.0,-,30
+gaussian_shipped (k=1.0),3192x,535x,1.86e-09,30
+gaussian_calibrated (k=ln(1000)),9.3x,1.6x,1.86e-09,30
+hybrid,1.0 (identical),1.0 (identical),n/a (analytically identical),30

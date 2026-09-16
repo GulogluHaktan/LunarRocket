@@ -1,0 +1,1 @@
+The sample-efficiency measures show a similar picture: the AUC (mean success rate over training) varies over a wide range across the three seeds per method (smoothstep 0.381-0.395, Gaussian 0.366-0.402, hybrid 0.339-0.399), and the difference among methods is markedly smaller than the difference across seeds -- again indicating that seed variance is the dominant source.

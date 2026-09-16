@@ -1,0 +1,1 @@
+Şekil 6, Tablo 3 ve Tablo 4'teki maliyet ölçütlerini tek bir görünümde birleştirmektedir: mesh-track üretim süresi ve analytic-track sorgu verimi yöntemler arasında görece yakınken, hibrit'in fade-only maliyetteki belirgin sıçraması ve dört yöntemin de aynı VRAM ayak izini paylaştığı aynı grafik takımında bir arada görülebilmektedir.

@@ -1,0 +1,83 @@
+[
+  {
+    "method": "smoothstep",
+    "seed": 42,
+    "auc_success_rate": 0.3889,
+    "steps_to_20pct_success": 1187840.0,
+    "steps_to_30pct_success": 1280000.0,
+    "auc_timeout_rate": 0.2103,
+    "auc_harsh_landing_rate": 0.3431
+  },
+  {
+    "method": "smoothstep",
+    "seed": 7,
+    "auc_success_rate": 0.381,
+    "steps_to_20pct_success": 1710080.0,
+    "steps_to_30pct_success": 1730560.0,
+    "auc_timeout_rate": 0.2174,
+    "auc_harsh_landing_rate": 0.3363
+  },
+  {
+    "method": "smoothstep",
+    "seed": 123,
+    "auc_success_rate": 0.3946,
+    "steps_to_20pct_success": 1556480.0,
+    "steps_to_30pct_success": 1628160.0,
+    "auc_timeout_rate": 0.2055,
+    "auc_harsh_landing_rate": 0.2948
+  },
+  {
+    "method": "gaussian",
+    "seed": 42,
+    "auc_success_rate": 0.4018,
+    "steps_to_20pct_success": 1525760.0,
+    "steps_to_30pct_success": 1556480.0,
+    "auc_timeout_rate": 0.1981,
+    "auc_harsh_landing_rate": 0.3254
+  },
+  {
+    "method": "gaussian",
+    "seed": 7,
+    "auc_success_rate": 0.3908,
+    "steps_to_20pct_success": 1740800.0,
+    "steps_to_30pct_success": 1781760.0,
+    "auc_timeout_rate": 0.2002,
+    "auc_harsh_landing_rate": 0.3376
+  },
+  {
+    "method": "gaussian",
+    "seed": 123,
+    "auc_success_rate": 0.3658,
+    "steps_to_20pct_success": 1269760.0,
+    "steps_to_30pct_success": 1382400.0,
+    "auc_timeout_rate": 0.2368,
+    "auc_harsh_landing_rate": 0.3431
+  },
+  {
+    "method": "hybrid",
+    "seed": 42,
+    "auc_success_rate": 0.3986,
+    "steps_to_20pct_success": 1505280.0,
+    "steps_to_30pct_success": 1658880.0,
+    "auc_timeout_rate": 0.2006,
+    "auc_harsh_landing_rate": 0.3315
+  },
+  {
+    "method": "hybrid",
+    "seed": 7,
+    "auc_success_rate": 0.3392,
+    "steps_to_20pct_success": 1454080.0,
+    "steps_to_30pct_success": 1771520.0,
+    "auc_timeout_rate": 0.2512,
+    "auc_harsh_landing_rate": 0.3422
+  },
+  {
+    "method": "hybrid",
+    "seed": 123,
+    "auc_success_rate": 0.3932,
+    "steps_to_20pct_success": 1341440.0,
+    "steps_to_30pct_success": 1402880.0,
+    "auc_timeout_rate": 0.2082,
+    "auc_harsh_landing_rate": 0.3229
+  }
+]

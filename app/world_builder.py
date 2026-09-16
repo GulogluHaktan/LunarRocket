@@ -68,43 +68,103 @@ class LunarLandingWorld:
             raise RuntimeError("LunarLandingWorld.build() must be called before reset()")
 
         self.terrain_generator.load_dem()
+        
+        from dataclasses import replace
+
+        self._reset_count = getattr(self, "_reset_count", 0) + 1
 
         if self.state is None:
-            # First reset: generate the static terrain, spawn rocks, and reset the physics world once
-            reset_sample = sample_reset(self.configs["terrain"], self.configs["rocket"], self.rng)
-            self._cached_terrain_sample = reset_sample
+            # First reset: pre-generate the grid of 16 distinct terrains and spawn them on the stage
+            self._cached_terrains = []
+            self._cached_samples = []
+            num_grid_cols = 4
+            spacing = 150.0
             
-            print("[LunarRocket] generating terrain mesh", flush=True)
-            terrain = self.terrain_generator.generate(reset_sample)
-            print("[LunarRocket] creating terrain USD mesh", flush=True)
-            terrain_path = str(self.configs["terrain"].get("prim_path", "/World/MoonTerrain"))
-            self.terrain_generator.create_or_update_usd_meshes(self.stage, terrain_path, terrain)
+            for idx in range(16):
+                # We use a unique seed for each grid cell to make it diverse
+                rng = np.random.default_rng(idx + 100)
+                reset_sample = sample_reset(self.configs["terrain"], self.configs["rocket"], rng)
+                
+                # Calculate the 3D grid offset
+                row = idx // num_grid_cols
+                col = idx % num_grid_cols
+                offset_x = col * spacing
+                offset_y = row * spacing
+                
+                # Apply coordinate offset to target and rocket positions in this sample
+                reset_sample = replace(
+                    reset_sample,
+                    target_position=(
+                        reset_sample.target_position[0] + offset_x,
+                        reset_sample.target_position[1] + offset_y,
+                        reset_sample.target_position[2],
+                    ),
+                    rocket_position=(
+                        reset_sample.rocket_position[0] + offset_x,
+                        reset_sample.rocket_position[1] + offset_y,
+                        reset_sample.rocket_position[2],
+                    )
+                )
+                
+                print(f"[LunarRocket] generating terrain mesh {idx}", flush=True)
+                terrain = self.terrain_generator.generate(reset_sample)
+                
+                # Shift the vertices of the terrain mesh in 3D coordinate space
+                offset_vertices = [(v[0] + offset_x, v[1] + offset_y, v[2]) for v in terrain.vertices]
+                if terrain.local_detail_mesh is not None:
+                    local_offset_vertices = [(v[0] + offset_x, v[1] + offset_y, v[2]) for v in terrain.local_detail_mesh.vertices]
+                    local_detail = replace(terrain.local_detail_mesh, vertices=local_offset_vertices)
+                else:
+                    local_detail = None
+                terrain = replace(terrain, vertices=offset_vertices, local_detail_mesh=local_detail)
+                
+                print(f"[LunarRocket] creating terrain USD mesh {idx}", flush=True)
+                terrain_path = f"/World/MoonTerrain_{idx}"
+                self.terrain_generator.create_or_update_usd_meshes(self.stage, terrain_path, terrain)
 
-            # Spawn some rocks around the landing center from assets/rocks/small_rocks/
-            self._spawn_rocks(terrain, reset_sample)
-            self._cached_terrain = terrain
-            
-            rocket_position = self._rocket_position_above_surface(reset_sample.rocket_position, terrain)
-            print("[LunarRocket] resetting Isaac world physics", flush=True)
+                # Spawn rocks for this terrain
+                self._spawn_rocks_for_grid(terrain, reset_sample, idx)
+                
+                self._cached_terrains.append(terrain)
+                self._cached_samples.append(reset_sample)
+
+            print("[LunarRocket] resetting Isaac world physics for the first time", flush=True)
             self.world.reset()
+            self._current_terrain_idx = 0
         else:
-            # Subsequent resets: reuse the cached terrain mesh and skip heavy world.reset()
-            terrain = self._cached_terrain
-            raw_sample = sample_reset(self.configs["terrain"], self.configs["rocket"], self.rng)
-            
-            # Reconstruct ResetSample using the cached static terrain parameters
-            from dataclasses import replace
-            reset_sample = replace(
-                raw_sample,
-                seed=self._cached_terrain_sample.seed,
-                terrain_origin=self._cached_terrain_sample.terrain_origin,
-                crater_count=self._cached_terrain_sample.crater_count,
-                slope=self._cached_terrain_sample.slope,
-                roughness_scale=self._cached_terrain_sample.roughness_scale
-            )
-            rocket_position = self._rocket_position_above_surface(reset_sample.rocket_position, terrain)
+            # Periodically regenerate all terrains to provide infinite domain randomization (every 100 episodes)
+            if self._reset_count % 100 == 0:
+                self._regenerate_grid_terrains()
 
-        print("[LunarRocket] resetting rocket pose", flush=True)
+            # Choose a new random terrain index for domain randomization
+            self._current_terrain_idx = self.rng.choice(16)
+
+        idx = self._current_terrain_idx
+        terrain = self._cached_terrains[idx]
+        base_sample = self._cached_samples[idx]
+        
+        # Randomize the rocket start pose and velocities relative to the selected terrain
+        raw_sample = sample_reset(self.configs["terrain"], self.configs["rocket"], self.rng)
+        
+        # Calculate the selected terrain's origin from target position offset
+        offset_x = (idx % 4) * 150.0
+        offset_y = (idx // 4) * 150.0
+        
+        rocket_pos_offset = (
+            raw_sample.rocket_position[0] + offset_x,
+            raw_sample.rocket_position[1] + offset_y,
+            raw_sample.rocket_position[2]
+        )
+        
+        reset_sample = replace(
+            base_sample,
+            rocket_position=rocket_pos_offset,
+            rocket_euler_deg=raw_sample.rocket_euler_deg
+        )
+        
+        rocket_position = self._rocket_position_above_surface(reset_sample.rocket_position, terrain)
+
+        print(f"[LunarRocket] resetting rocket pose to terrain {idx}", flush=True)
         rocket_state = self.rocket.reset_pose(rocket_position, reset_sample.rocket_euler_deg)
         self.state = EnvironmentState(reset_sample, terrain, rocket_state)
         
@@ -112,6 +172,65 @@ class LunarLandingWorld:
         self._log_terrain_stats(terrain)
         
         return self.state
+
+    def _regenerate_grid_terrains(self) -> None:
+        from dataclasses import replace
+        print("[LunarRocket] periodically regenerating all 16 grid terrains to prevent memorization...", flush=True)
+        num_grid_cols = 4
+        spacing = 150.0
+        
+        for idx in range(16):
+            # Sample a brand new randomized terrain with the active RNG
+            reset_sample = sample_reset(self.configs["terrain"], self.configs["rocket"], self.rng)
+            
+            # Apply coordinate offset to target and rocket positions in this sample
+            row = idx // num_grid_cols
+            col = idx % num_grid_cols
+            offset_x = col * spacing
+            offset_y = row * spacing
+            
+            reset_sample = replace(
+                reset_sample,
+                target_position=(
+                    reset_sample.target_position[0] + offset_x,
+                    reset_sample.target_position[1] + offset_y,
+                    reset_sample.target_position[2],
+                ),
+                rocket_position=(
+                    reset_sample.rocket_position[0] + offset_x,
+                    reset_sample.rocket_position[1] + offset_y,
+                    reset_sample.rocket_position[2],
+                )
+            )
+            
+            print(f"[LunarRocket] regenerating terrain mesh {idx}...", flush=True)
+            terrain = self.terrain_generator.generate(reset_sample)
+            
+            # Shift the vertices of the terrain mesh in 3D coordinate space
+            offset_vertices = [(v[0] + offset_x, v[1] + offset_y, v[2]) for v in terrain.vertices]
+            if terrain.local_detail_mesh is not None:
+                local_offset_vertices = [(v[0] + offset_x, v[1] + offset_y, v[2]) for v in terrain.local_detail_mesh.vertices]
+                local_detail = replace(terrain.local_detail_mesh, vertices=local_offset_vertices)
+            else:
+                local_detail = None
+            terrain = replace(terrain, vertices=offset_vertices, local_detail_mesh=local_detail)
+            
+            # Update the USD mesh in-place (fast)
+            terrain_path = f"/World/MoonTerrain_{idx}"
+            self.terrain_generator.create_or_update_usd_meshes(self.stage, terrain_path, terrain)
+
+            # Re-spawn/update rocks for this terrain
+            self._spawn_rocks_for_grid(terrain, reset_sample, idx)
+            
+            # Update cache
+            self._cached_terrains[idx] = terrain
+            self._cached_samples[idx] = reset_sample
+
+        # Notify physics engine of stage collision updates
+        print("[LunarRocket] resetting Isaac world physics after terrain grid regeneration...", flush=True)
+        self.world.reset()
+
+
 
     def step(self, throttle: float = 0.0, gimbal_x: float = 0.0, gimbal_y: float = 0.0) -> CameraObservation:
         if self.world is None:
@@ -404,3 +523,92 @@ class LunarLandingWorld:
                 
         except Exception as e:
             print(f"[LunarRocket] warning: could not spawn/update rocks: {e}", flush=True)
+
+    def _spawn_rocks_for_grid(self, terrain: TerrainMeshData, reset_sample, idx: int) -> None:
+        try:
+            from pxr import UsdGeom, Sdf, UsdPhysics, Gf
+            import random
+            from app.config import resolve_project_path
+            
+            rocks_config = self.configs["terrain"].get("rocks", {})
+            if not bool(rocks_config.get("enabled", True)):
+                return
+            
+            rocks_group_path = f"/World/Rocks_{idx}"
+            rocks_group_prim = self.stage.GetPrimAtPath(rocks_group_path)
+            
+            # Find all available rock USD files
+            rocks_dir = resolve_project_path("assets/rocks/small_rocks")
+            if not rocks_dir.exists():
+                return
+            
+            rock_files = list(rocks_dir.glob("rock_*.usd"))
+            if not rock_files:
+                return
+                
+            # Load spawn parameters from configs
+            total_rocks = int(rocks_config.get("total_count", 35))
+            lz_percentage = float(rocks_config.get("landing_zone_percentage", 0.75))
+            min_dist = float(rocks_config.get("min_distance_from_center_m", 2.0))
+            lz_radius = float(rocks_config.get("landing_zone_radius_m", 12.0))
+            outer_radius = float(rocks_config.get("outer_radius_m", 35.0))
+            scale_min, scale_max = rocks_config.get("scale_range", [0.12, 0.55])
+            collision_enabled = bool(rocks_config.get("collision_enabled", True))
+            
+            center_x, center_y = reset_sample.target_position[:2]
+            
+            # If rocks group doesn't exist, define it and populate the pool once
+            if not rocks_group_prim:
+                UsdGeom.Xform.Define(self.stage, rocks_group_path)
+                for i in range(total_rocks):
+                    rock_prim_path = f"{rocks_group_path}/Rock_{i}"
+                    rock_prim = self.stage.DefinePrim(rock_prim_path)
+                    rock_file = random.choice(rock_files)
+                    rock_prim.GetReferences().AddReference(str(rock_file))
+                    
+                    # Apply transform ops once
+                    xformable = UsdGeom.Xformable(rock_prim)
+                    xformable.ClearXformOpOrder()
+                    xformable.AddTranslateOp()
+                    xformable.AddRotateXYZOp()
+                    xformable.AddScaleOp()
+                    
+                    if collision_enabled:
+                        UsdPhysics.CollisionAPI.Apply(rock_prim)
+                        rock_prim.CreateAttribute("physxCollision:approximation", Sdf.ValueTypeNames.Token).Set("convexHull")
+                        rock_prim.CreateAttribute("physxCollision:collisionEnabled", Sdf.ValueTypeNames.Bool).Set(True)
+            
+            # Now, update positions/scales/rotations of the existing pool (extremely fast!)
+            for i in range(total_rocks):
+                rock_prim_path = f"{rocks_group_path}/Rock_{i}"
+                rock_prim = self.stage.GetPrimAtPath(rock_prim_path)
+                if not rock_prim:
+                    continue
+                
+                # Roll location relative to the center of this terrain
+                if random.random() < lz_percentage:
+                    r = random.uniform(min_dist, lz_radius)
+                else:
+                    r = random.uniform(lz_radius, outer_radius)
+                
+                angle = random.uniform(0, 2 * np.pi)
+                rx = center_x + r * np.cos(angle)
+                ry = center_y + r * np.sin(angle)
+                rz = self._get_terrain_height(rx, ry, terrain)
+                
+                # Retrieve existing xform ops and set values directly
+                xformable = UsdGeom.Xformable(rock_prim)
+                ordered_ops = xformable.GetOrderedXformOps()
+                
+                scale = random.uniform(scale_min, scale_max)
+                rot_x = random.uniform(0, 360)
+                rot_y = random.uniform(0, 360)
+                rot_z = random.uniform(0, 360)
+                
+                ordered_ops[0].Set(Gf.Vec3d(rx, ry, rz))
+                ordered_ops[1].Set(Gf.Vec3f(rot_x, rot_y, rot_z))
+                ordered_ops[2].Set(Gf.Vec3f(scale, scale, scale))
+                
+        except Exception as e:
+            print(f"[LunarRocket] warning: could not spawn rocks for grid {idx}: {e}", flush=True)
+

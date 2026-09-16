@@ -1,0 +1,1 @@
+Figure 6 combines the cost measures of Table 3 and Table 4 into a single view: the mesh-track generation time and the analytic-track query throughput are relatively close across methods, while the hybrid's marked jump in fade-only cost and the fact that all four methods share the same VRAM footprint can be seen together in the same set of plots.

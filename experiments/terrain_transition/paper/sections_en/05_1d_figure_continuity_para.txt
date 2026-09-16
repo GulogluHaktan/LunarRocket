@@ -1,0 +1,1 @@
+Figure 5 visualizes the analytic and mesh-track continuity measurements of Table 2 as a bar chart per method; that gaussian_shipped has an error bar orders of magnitude higher than the other three methods in all four panels also visually confirms the magnitude difference reported in the table.

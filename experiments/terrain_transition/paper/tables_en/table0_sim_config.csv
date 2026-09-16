@@ -1,0 +1,41 @@
+Group,Parameter,Value
+Physics / simulation,Physics engine,NVIDIA PhysX 5 (GPU pipeline)
+,Simulation step (dt),1/120 s (120 Hz)
+,Control frequency (decimation = 2),60 Hz
+,Episode length,20 s (1200 control steps)
+,Gravity,"0, 0, -1.62 m/s^2"
+,Number of parallel environments,512
+,Environment spacing (env_spacing),90 m
+,Physics replication,replicate_physics + clone_in_fabric (on)
+,Friction (static / dynamic),0.85 / 0.65 (combine: multiply)
+,Restitution,0.02
+Vehicle and actuation,Vehicle mass,1.66 kg (1.63 body + gimbal linkages)
+,Maximum thrust,30 N
+,Maximum command throttle,0.35 (~ 10.5 N effective)
+,Physical gimbal limit,+-25 deg (mechanical hard stop)
+,Policy gimbal envelope,4 deg - 8 deg (scales with curriculum difficulty)
+,Thrust lever arm,0.25 m
+,TVC actuator (implicit),"effort 2.5, stiffness 10, damping 0.1, armature 0.002"
+,Observation / action dimension,125 / 3
+,Initial altitude,25 m (upright orientation)
+RL training (SB3 SAC),Policy network,"MLP [384, 256, 128], ELU"
+,Replay buffer,1 000 000
+,learning_starts,16 384
+,Batch size,1024
+,Learning rate,3e-4
+,gamma / tau,0.99 / 0.005
+,train_freq / gradient_steps,1 / 32
+,Entropy coefficient,automatic (target_entropy = -1.5)
+,Normalization,"normalize_input + normalize_value on, clip_obs = 10"
+,Comparison budget,350 iter x 32 x 512 ~ 5.73 M environment steps
+,Seeds,"42, 7, 123 (n = 3 per method, sequential)"
+,Device,single GPU (cuda:0)
+Blending parameters,Transition radius (R),8.0 m
+,Method options,smoothstep / gaussian / hybrid (ISAACLAB_TERRAIN_BLEND_METHOD)
+,Calibrated Gaussian coefficient (k),ln(1000) ~ 6.9078
+,Hybrid contact radius (r_c),1.5 m
+,Hybrid switch width (w),0.3 m
+,Fine-detail amplitude range,0.006-0.020 m
+,Macro height / slope scale,0.45 m / 0.035
+,Craters / rocks (per episode),3 / 5
+,Terrain pool (size / refresh),15 slots / 60 assignments
