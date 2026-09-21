@@ -21,10 +21,40 @@ train_freq: 1
 # enough policy updates while retaining parallel simulation throughput.
 gradient_steps: 32
 ent_coef: "auto"
-# Default target entropy is -action_dim (-3); that pushed entropy down hard and
-# fast alongside the unnormalized reward scale above. -1.5 keeps meaningfully
-# more exploration through the early curriculum stages.
-target_entropy: -1.5
+# Default target entropy is -action_dim; that pushed entropy down hard and
+# fast alongside the unnormalized reward scale above. This was set to -1.5
+# (half of the then-default -action_dim=-3, under the old 3-dim TVC action
+# space [throttle, yaw, pitch]) to keep meaningfully more exploration
+# through the early curriculum stages.
+#
+# NOT RESCALED for the TVC->RCS conversion originally: action_dim grew
+# 3 -> 9 ([throttle, rcs_0..rcs_7]), so -1.5 went from "half of default" to
+# "1/6 of default". Confirmed on a real GPU run (2026-09-21,
+# logs/sb3_sac/.../2026-09-21_16-39-44): ent_coef collapsed 0.94 -> ~0.0004
+# by ~400k of ~19.7M steps and NEVER recovered -- success_rate was 0% for
+# the entire 15.6M-step run before it was stopped, the same entropy-collapse
+# signature documented in README.md section 6's postmortem.
+#
+# TESTED AND REJECTED: rescaled to -4.5 (half of the new default -9,
+# preserving the original -1.5/-3 ratio) on the theory that the ratio to
+# -action_dim was the load-bearing quantity. Same-day rerun
+# (logs/sb3_sac/.../2026-09-21_[validation, stopped at 256k steps]) showed
+# an almost IDENTICAL ent_coef collapse curve to the -1.5 run at matching
+# step counts (0.362->0.173->0.0993->0.0314->0.0122 by 256k, vs.
+# 0.176->0.0267->0.00406 by 307k under -1.5) -- rescaling target_entropy's
+# magnitude alone does not fix this. success_rate was 0% and
+# failed_slammed_fraction was 1 (every landing too fast) throughout, so the
+# policy never discovers a survivable descent before entropy collapses,
+# regardless of how loose/tight this target is. The actual bottleneck is
+# something else the low-entropy policy converges to before it ever lands
+# softly once -- likely in the untrained RCS reward/curriculum placeholders
+# (rew_wb_rcs_weight, policy_min/max_rcs_thrust_n, max_effective_tilt_deg;
+# see their cfg comments) rather than this SAC hyperparameter. Left at -4.5
+# (no worse than -1.5, and a defensible target for the new action_dim) but
+# do NOT expect this alone to fix training -- the RCS reward/curriculum
+# constants need real tuning work before a long unattended run is worth the
+# GPU time again.
+target_entropy: -4.5
 target_update_interval: 1
 learning_rate: !!float 3e-4
 policy_kwargs:
