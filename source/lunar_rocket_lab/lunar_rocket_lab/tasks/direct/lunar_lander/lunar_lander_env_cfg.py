@@ -4,7 +4,7 @@ import os
 from pathlib import Path
 
 import isaaclab.sim as sim_utils
-from isaaclab.assets import ArticulationCfg
+from isaaclab.assets import RigidObjectCfg
 from isaaclab.envs.direct_rl_env_cfg import DirectRLEnvCfg
 from isaaclab.scene import InteractiveSceneCfg
 from isaaclab.sim import SimulationCfg
@@ -67,7 +67,15 @@ class LunarLanderEnvCfg(DirectRLEnvCfg):
         clone_in_fabric=True,
     )
 
-    rocket: ArticulationCfg = ArticulationCfg(
+    # RigidObject, not ArticulationCfg: the RCS/fixed-engine design (see
+    # rcs_thruster_layout) has zero joints -- the MJCF->USD converter only
+    # authors an ArticulationRootAPI prim when the body has at least one
+    # internal joint, so Isaac Lab's Articulation wrapper rejects this
+    # joint-free mesh outright ("Expected exactly one ArticulationRootAPI
+    # prim ... found 0"). A joint-free floating body is a RigidObject; forces
+    # are still applied via the same permanent_wrench_composer API both
+    # asset types share (see LunarLanderEnv._pre_physics_step).
+    rocket: RigidObjectCfg = RigidObjectCfg(
         prim_path="/World/envs/env_.*/Rocket",
         spawn=sim_utils.UsdFileCfg(
             # This USD is the checked-in Isaac conversion of
@@ -85,23 +93,11 @@ class LunarLanderEnvCfg(DirectRLEnvCfg):
             # applies the contact reporter API to the body and sensor init
             # fails outright ("could not find any bodies with contact reporter API").
             activate_contact_sensors=True,
-            # fix_root_link moved off UsdFileCfg into the (solver-common)
-            # articulation root properties as of Isaac Lab >=3.0 -- the
-            # rocket must stay a floating base (it flies), not fixed to world.
-            articulation_props=sim_utils.ArticulationRootPropertiesCfg(fix_root_link=False),
         ),
-        init_state=ArticulationCfg.InitialStateCfg(
+        init_state=RigidObjectCfg.InitialStateCfg(
             pos=(0.0, 0.0, 25.0),
             rot=(1.0, 0.0, 0.0, 0.0),
-            joint_pos={".*": 0.0},
-            joint_vel={".*": 0.0},
         ),
-        # No actuators: the TVC gimbal servos are gone (fixed main engine, no
-        # joints), and the RCS ring is 8 fixed-direction force emitters, not
-        # PhysX-driven joints -- both are computed as body wrenches directly
-        # in LunarLanderEnv._pre_physics_step from rcs_thruster_layout below,
-        # the same way the old TVC-deflected thrust force always was.
-        actuators={},
     )
 
     # 1.63 kg hopper. The old +0.01/0.02 kg TVC yaw/pitch link mass is gone

@@ -12,15 +12,15 @@ from app.terrain_pool import generate_terrain_pool_batch
 
 import isaaclab.sim as sim_utils
 from isaaclab import cloner
-from isaaclab.assets import Articulation
+from isaaclab.assets import RigidObject
 from isaaclab.envs.direct_rl_env import DirectRLEnv
 
 # Isaac Lab task convention: the *_env_cfg module holds only Cfg dataclasses
-# (isaaclab.assets.ArticulationCfg, isaaclab.envs.DirectRLEnvCfg, etc.), never
+# (isaaclab.assets.RigidObjectCfg, isaaclab.envs.DirectRLEnvCfg, etc.), never
 # the runtime env class. gym.register's env_cfg_entry_point resolves this
 # module alone (see __init__.py), which must succeed before SimulationApp
 # exists. This module (lunar_lander_env), by contrast, imports DirectRLEnv
-# and Articulation -- runtime classes that pull in isaaclab.sim.SimulationContext
+# and RigidObject -- runtime classes that pull in isaaclab.sim.SimulationContext
 # and therefore pxr -- and must stay out of the env_cfg_entry_point's import
 # chain, or resolving the cfg crashes with "No module named 'pxr'" /
 # "must take place after SimulationApp has been instantiated" before Kit
@@ -346,7 +346,12 @@ class LunarLanderEnv(DirectRLEnv):
         if rocket_cfg.spawn is not None:
             rocket_cfg.spawn = rocket_cfg.spawn.copy()
             rocket_cfg.spawn.spawn_path = "/World/envs/env_0/Rocket"
-        self._rocket = Articulation(rocket_cfg)
+        # RigidObject, not Articulation: the RCS/fixed-engine design (see
+        # rcs_thruster_layout) has zero joints left -- Isaac Lab's
+        # Articulation wrapper requires an ArticulationRootAPI prim, which
+        # the MJCF->USD converter only authors when the body has at least
+        # one internal joint. A joint-free floating body is a RigidObject.
+        self._rocket = RigidObject(rocket_cfg)
         self._contact_sensor = None
         if self.cfg.contact_sensor_enabled:
             from isaaclab.sensors import ContactSensor, ContactSensorCfg
@@ -1107,11 +1112,6 @@ class LunarLanderEnv(DirectRLEnv):
         root_state[:, 8] = spawn_speed * torch.sin(spawn_heading)
         self._rocket.write_root_pose_to_sim(root_state[:, :7], env_ids)
         self._rocket.write_root_velocity_to_sim(root_state[:, 7:], env_ids)
-        joint_pos = self._rocket.data.default_joint_pos[env_ids].clone()
-        joint_vel = self._rocket.data.default_joint_vel[env_ids].clone()
-        joint_pos.zero_()
-        joint_vel.zero_()
-        self._rocket.write_joint_state_to_sim(joint_pos, joint_vel, env_ids=env_ids)
 
         self._target_pos_w[env_ids, :2] = target_xy
         self._target_pos_w[env_ids, 2] = self._upright_root_height(target_xy)

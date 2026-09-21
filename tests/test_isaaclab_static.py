@@ -117,16 +117,17 @@ class IsaacLabStaticTests(unittest.TestCase):
         self.assertIn("slammed = landed & (vertical_speed > self.cfg.crash_vertical_speed_mps)", source)
         self.assertIn("harsh = landed & ~soft & ~slammed", source)
 
-    def test_isaaclab_uses_exact_xml_derived_articulation(self) -> None:
+    def test_isaaclab_uses_exact_xml_derived_rigid_object(self) -> None:
         source = _combined_env_source()
 
         self.assertIn('assets/rocket/hopper_lunar.usd', source)
         self.assertIn("scale=(1.0, 1.0, 1.0)", source)
         self.assertIn('rocket_cfg.spawn.spawn_path = "/World/envs/env_0/Rocket"', source)
-        self.assertIn("self._rocket = Articulation(rocket_cfg)", source)
-        # No actuators: the RCS ring and fixed main engine are wrench-composer
-        # forces, not PhysX-driven joints (see rcs_thruster_layout).
-        self.assertIn("actuators={}", source)
+        # RigidObject, not Articulation: the RCS/fixed-engine design has zero
+        # joints, so there is no ArticulationRootAPI prim for Isaac Lab's
+        # Articulation wrapper to find (see rcs_thruster_layout's cfg comment
+        # and the RigidObjectCfg comment above `rocket`).
+        self.assertIn("self._rocket = RigidObject(rocket_cfg)", source)
         self.assertIn('find_bodies("hopper")', source)
         self.assertNotIn("PreviewLandingPad", source)
         self.assertNotIn("PreviewLandingTarget", source)
