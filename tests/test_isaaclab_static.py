@@ -25,7 +25,7 @@ class IsaacLabStaticTests(unittest.TestCase):
     def test_isaaclab_env_uses_terrain_relative_observations_and_dones(self) -> None:
         source = _combined_env_source()
 
-        self.assertIn("observation_space = 125", source)
+        self.assertIn("observation_space = 137", source)
         self.assertIn("foot_clearances = self._foot_clearances(pos, quat)", source)
         self.assertIn("altitude = torch.amin(foot_clearances, dim=-1)", source)
         self.assertIn("terrain_metrics = self._terrain_metrics", source)
@@ -38,14 +38,20 @@ class IsaacLabStaticTests(unittest.TestCase):
         self.assertIn("def _upright_root_height(", source)
         self.assertIn("foot_clearance_spread <= self.cfg.landing_max_foot_clearance_m", source)
 
-    def test_isaaclab_thrust_is_body_frame_and_generates_torque(self) -> None:
+    def test_isaaclab_thrust_is_body_frame_and_rcs_generates_torque(self) -> None:
         source = _combined_env_source()
 
-        self.assertIn("thrust_dir_b", source)
-        self.assertIn("thrust_dir_w = _quat_rotate(quat, thrust_dir_b)", source)
-        self.assertIn("self._rocket.data.joint_pos", source)
-        self.assertIn("torch.sin(pitch_y)", source)
-        self.assertIn("torch.cross(lever_w, force_w", source)
+        # Fixed main engine: no gimbal, force line passes through the body
+        # Z-axis so it contributes zero torque (TVC's lever-arm torque calc
+        # is gone).
+        self.assertIn("engine_thrust_dir_b", source)
+        self.assertIn("engine_dir_w = _quat_rotate(quat, self._engine_thrust_dir_b", source)
+        self.assertIn("torque_w = torch.zeros_like(force_w)", source)
+        # RCS ring: 8 independent fixed-direction jets, each contributing a
+        # torque via its own fixed lever arm.
+        self.assertIn("rcs_thruster_layout", source)
+        self.assertIn("rcs_duty = torch.clamp(self._actions[:, 1:], 0.0, 1.0)", source)
+        self.assertIn("torque_w = torque_w + torch.cross(pos_w_i, force_w_i, dim=-1)", source)
         self.assertIn("is_global=True", source)
         self.assertIn("hover_throttle * (raw_throttle + 1.0)", source)
         self.assertIn("max_commanded_throttle = 0.35", source)
@@ -65,13 +71,13 @@ class IsaacLabStaticTests(unittest.TestCase):
             "rew_wb_foot_force_max_n",
             "rew_wb_throttle_s0",
             "rew_wb_altitude_k",
-            "rew_wb_tvc_d",
+            "rew_wb_rcs_d",
             "rew_wb_rel_x_power",
             "rew_wb_rel_y_power",
             "rew_wb_vxy_power",
         ):
             self.assertIn(field, source, f"missing whiteboard reward field {field}")
-        for term in ("proximity", "tilt", "foot_load", "throttle", "altitude", "tvc", "rel_xy", "velocity"):
+        for term in ("proximity", "tilt", "foot_load", "throttle", "altitude", "rcs", "rel_xy", "velocity"):
             self.assertIn(f'"{term}"', source, f"missing whiteboard reward term {term}")
         # Dense terms stay per-second so an early crash never pays off by
         # cutting off the penalty stream.
@@ -83,7 +89,7 @@ class IsaacLabStaticTests(unittest.TestCase):
         self.assertIn("def _foot_normal_forces(", source)
         self.assertIn("contact_sensor_enabled = True", source)
         self.assertIn("curriculum_success_threshold", source)
-        self.assertIn("policy_max_gimbal_deg = 8.0", source)
+        self.assertIn("policy_max_rcs_thrust_n", source)
         self.assertIn('log["Curriculum/difficulty"]', source)
         self.assertIn('log["Metrics/success_rate"]', source)
         self.assertIn('terms["terminal"] = terminal', source)
@@ -92,10 +98,17 @@ class IsaacLabStaticTests(unittest.TestCase):
         source = _combined_env_source()
 
         # "Kisitlar" block: theta +/-15 deg, dikey hiz < 1 (crash above),
-        # yatay ve acisal hiz < 0.5, bacaklar arasi 0.16 m.
+        # yatay ve acisal hiz < 0.5, bacaklar arasi 0.16 m. soft_horizontal
+        # and soft_vertical are deliberate, user-approved deviations from the
+        # board's literal soft-landing numbers (see the cfg comments) --
+        # gate diagnostics across several full runs showed gate_horizontal
+        # and then gate_vertical as binding constraints keeping success_rate
+        # plateaued well below the goal with the other gates intact.
+        # soft_vertical_speed_mps was moved toward, not past, the board's own
+        # hard crash_vertical_speed_mps = 1.0 limit.
         self.assertIn("soft_tilt_deg = 15.0", source)
-        self.assertIn("soft_vertical_speed_mps = 0.5", source)
-        self.assertIn("soft_horizontal_speed_mps = 0.5", source)
+        self.assertIn("soft_vertical_speed_mps = 0.6", source)
+        self.assertIn("soft_horizontal_speed_mps = 0.7", source)
         self.assertIn("soft_angular_speed_rps = 0.5", source)
         self.assertIn("landing_max_foot_clearance_m = 0.16", source)
         self.assertIn("crash_vertical_speed_mps = 1.0", source)
@@ -111,7 +124,9 @@ class IsaacLabStaticTests(unittest.TestCase):
         self.assertIn("scale=(1.0, 1.0, 1.0)", source)
         self.assertIn('rocket_cfg.spawn.spawn_path = "/World/envs/env_0/Rocket"', source)
         self.assertIn("self._rocket = Articulation(rocket_cfg)", source)
-        self.assertIn('joint_names_expr=["tvc_.*_joint"]', source)
+        # No actuators: the RCS ring and fixed main engine are wrench-composer
+        # forces, not PhysX-driven joints (see rcs_thruster_layout).
+        self.assertIn("actuators={}", source)
         self.assertIn('find_bodies("hopper")', source)
         self.assertNotIn("PreviewLandingPad", source)
         self.assertNotIn("PreviewLandingTarget", source)
@@ -153,7 +168,7 @@ class IsaacLabStaticTests(unittest.TestCase):
         self.assertNotIn("/ self.cfg.rocket_mass_kg", source)
         self.assertNotIn("* self.cfg.max_thrust_n", source)
         self.assertIn("hover_throttle = self._rocket_mass_kg * abs(float(self.cfg.sim.gravity[2])) / self._max_thrust_n", source)
-        self.assertIn("force_w = thrust_dir_w * (self._actions[:, 0:1] * self._max_thrust_n.unsqueeze(-1))", source)
+        self.assertIn("force_w = engine_dir_w * (self._actions[:, 0:1] * self._max_thrust_n.unsqueeze(-1))", source)
         self.assertIn("estimated = self._rocket_mass_kg * vertical_speed / (contact_time * num_feet)", source)
 
     def test_residual_action_is_a_disabled_by_default_scaffold(self) -> None:
@@ -178,7 +193,7 @@ class IsaacLabStaticTests(unittest.TestCase):
         # The ablation must not shrink the observation tensor -- only zero its
         # content -- so a B2 comparison run (R2) is architecture-identical to
         # the baseline (R0) and isolates the information-content variable.
-        self.assertIn("observation_space = 125", source)
+        self.assertIn("observation_space = 137", source)
 
     def test_td3_and_ddpg_algo_arms_are_registered_and_selectable(self) -> None:
         task_init = TASK_INIT.read_text()

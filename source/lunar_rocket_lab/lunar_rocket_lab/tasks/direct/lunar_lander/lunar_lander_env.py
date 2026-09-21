@@ -50,11 +50,18 @@ class LunarLanderEnv(DirectRLEnv):
         self._ablate_lidar = os.environ.get("ISAACLAB_ABLATE_LIDAR", "0").lower() not in {"0", "false", "no", ""}
         super().__init__(cfg, render_mode, **kwargs)
         if getattr(self, "_video_camera", None) is not None:
+            # Opt-in override for the dedicated RTX video camera's fixed pose
+            # (default: a 3/4 side angle) -- e.g. ISAACLAB_VIDEO_CAMERA_EYE=
+            # "0,0,6" with ISAACLAB_VIDEO_CAMERA_TARGET="0,0,0.5" for a
+            # straight-overhead shot. Off by default, so normal training/play
+            # video capture is unaffected.
+            eye_raw = os.environ.get("ISAACLAB_VIDEO_CAMERA_EYE", "6.0,-7.0,5.0")
+            target_raw = os.environ.get("ISAACLAB_VIDEO_CAMERA_TARGET", "0.0,0.0,1.5")
             self._video_camera.set_world_poses_from_view(
-                np.asarray([[6.0, -7.0, 5.0]], dtype=np.float32),
-                np.asarray([[0.0, 0.0, 1.5]], dtype=np.float32),
+                np.asarray([[float(v) for v in eye_raw.split(",")]], dtype=np.float32),
+                np.asarray([[float(v) for v in target_raw.split(",")]], dtype=np.float32),
             )
-        self._actions = torch.zeros(self.num_envs, 3, device=self.device)
+        self._actions = torch.zeros(self.num_envs, 1 + len(cfg.rcs_thruster_layout), device=self.device)
         self._prev_actions = torch.zeros_like(self._actions)
         self._forces = torch.zeros(self.num_envs, 1, 3, device=self.device)
         self._torques = torch.zeros(self.num_envs, 1, 3, device=self.device)
@@ -64,17 +71,25 @@ class LunarLanderEnv(DirectRLEnv):
         self._max_thrust_n = torch.full((self.num_envs,), float(cfg.max_thrust_n), device=self.device)
         self._previous_distance_xy = torch.zeros(self.num_envs, device=self.device)
         self._previous_altitude = torch.zeros(self.num_envs, device=self.device)
+        # Per-env spawn altitude, set at each reset -- used by _get_rewards
+        # to size the loiter grace period to THIS episode's own physically
+        # -implied minimum descent time (see rew_wb_loiter_altitude_grace_frac).
+        self._spawn_altitude_m = torch.zeros(self.num_envs, device=self.device)
         self._body_ids = self._rocket.find_bodies("hopper")[0]
         if len(self._body_ids) != 1:
             raise RuntimeError(f"Expected one XML hopper root body, found body ids: {self._body_ids}")
-        self._joint_position_targets = torch.zeros(
-            self.num_envs,
-            self._rocket.num_joints,
-            dtype=torch.float32,
-            device=self.device,
+        # RCS thruster ring + fixed main engine (replaces the old TVC gimbal
+        # joints): fixed body-frame positions/directions, consumed directly
+        # in _pre_physics_step to compute forces/torques as wrenches -- no
+        # joints or actuators involved (see rcs_thruster_layout's cfg
+        # comment).
+        rcs_pos_b, rcs_dir_b = zip(*cfg.rcs_thruster_layout)
+        self._rcs_pos_b = torch.tensor(rcs_pos_b, dtype=torch.float32, device=self.device)
+        rcs_dir_b = torch.tensor(rcs_dir_b, dtype=torch.float32, device=self.device)
+        self._rcs_dir_b = rcs_dir_b / torch.linalg.norm(rcs_dir_b, dim=-1, keepdim=True)
+        self._engine_thrust_dir_b = torch.tensor(
+            cfg.engine_thrust_dir_b, dtype=torch.float32, device=self.device
         )
-        self._yaw_joint_ids = self._rocket.find_joints("tvc_yaw_joint")[0]
-        self._pitch_joint_ids = self._rocket.find_joints("tvc_pitch_joint")[0]
         self._foot_offsets_b = torch.tensor(
             self.cfg.rocket_foot_offsets_m,
             dtype=torch.float32,
@@ -183,19 +198,130 @@ class LunarLanderEnv(DirectRLEnv):
                 "foot_load",
                 "throttle",
                 "altitude",
-                "tvc",
+                "rcs",
                 "rel_xy",
                 "velocity",
+                "readiness",
+                "loiter",
                 "terminal",
                 "total",
             )
         }
+        # Opt-in, per-step CSV telemetry (position/thrust/RCS duty/attitude),
+        # off by default (zero overhead) unless ISAACLAB_TELEMETRY_CSV_DIR is
+        # set -- added to diagnose the timeout/gate bottlenecks in
+        # TRAINING_STATUS.md by eye instead of only from aggregated
+        # Metrics/* scalars. Limited to a handful of env ids
+        # (ISAACLAB_TELEMETRY_ENV_IDS, default just env 0) since writing
+        # every one of e.g. 128 envs every step would dominate wall-clock and
+        # disk. Chunked into multiple files (ISAACLAB_TELEMETRY_CHUNK_STEPS
+        # rows/file) so a long run doesn't produce one unbounded CSV.
+        self._telemetry_csv_dir = os.environ.get("ISAACLAB_TELEMETRY_CSV_DIR", "").strip()
+        self._telemetry_env_ids: list[int] = []
+        self._telemetry_writer = None
+        self._telemetry_file = None
+        self._telemetry_rows_in_chunk = 0
+        self._telemetry_chunk_index = 0
+        self._telemetry_step_counter = 0
+        self._telemetry_chunk_steps = max(1, int(os.environ.get("ISAACLAB_TELEMETRY_CHUNK_STEPS", "5000")))
+        if self._telemetry_csv_dir:
+            ids_raw = os.environ.get("ISAACLAB_TELEMETRY_ENV_IDS", "0")
+            self._telemetry_env_ids = sorted(
+                {int(x) for x in ids_raw.split(",") if x.strip() != "" and int(x) < self.num_envs}
+            )
+            os.makedirs(self._telemetry_csv_dir, exist_ok=True)
+            self._telemetry_open_new_chunk()
+            print(
+                f"[LunarRocket] step telemetry ON: envs={self._telemetry_env_ids} -> "
+                f"{self._telemetry_csv_dir} (chunk={self._telemetry_chunk_steps} rows/file)",
+                flush=True,
+            )
+
+    def _telemetry_open_new_chunk(self) -> None:
+        import csv
+
+        if self._telemetry_file is not None:
+            self._telemetry_file.close()
+        path = os.path.join(
+            self._telemetry_csv_dir,
+            f"telemetry_chunk_{self._telemetry_chunk_index:05d}.csv",
+        )
+        self._telemetry_file = open(path, "w", newline="")
+        self._telemetry_writer = csv.writer(self._telemetry_file)
+        self._telemetry_writer.writerow(
+            [
+                "sim_step",
+                "env_id",
+                "difficulty",
+                "pos_x",
+                "pos_y",
+                "pos_z",
+                "quat_w",
+                "quat_x",
+                "quat_y",
+                "quat_z",
+                "lin_vel_x",
+                "lin_vel_y",
+                "lin_vel_z",
+                "ang_vel_x",
+                "ang_vel_y",
+                "ang_vel_z",
+                "throttle_cmd",
+                *[f"rcs_{i}_duty" for i in range(len(self.cfg.rcs_thruster_layout))],
+                "target_x",
+                "target_y",
+                "distance_xy_m",
+                "altitude_m",
+            ]
+        )
+        self._telemetry_chunk_index += 1
+        self._telemetry_rows_in_chunk = 0
+
+    def _telemetry_log_step(
+        self,
+        pos: torch.Tensor,
+        quat: torch.Tensor,
+        lin_vel: torch.Tensor,
+        ang_vel: torch.Tensor,
+        distance_xy: torch.Tensor,
+        altitude: torch.Tensor,
+    ) -> None:
+        if not self._telemetry_env_ids:
+            return
+        rcs_duty = torch.clamp(self._actions[:, 1:], 0.0, 1.0)
+        self._telemetry_step_counter += 1
+        for env_id in self._telemetry_env_ids:
+            self._telemetry_writer.writerow(
+                [
+                    self._telemetry_step_counter,
+                    env_id,
+                    float(self._difficulty[env_id].item()),
+                    *[float(v) for v in pos[env_id].tolist()],
+                    *[float(v) for v in quat[env_id].tolist()],
+                    *[float(v) for v in lin_vel[env_id].tolist()],
+                    *[float(v) for v in ang_vel[env_id].tolist()],
+                    float(self._actions[env_id, 0].item()),
+                    *[float(v) for v in rcs_duty[env_id].tolist()],
+                    float(self._target_pos_w[env_id, 0].item()),
+                    float(self._target_pos_w[env_id, 1].item()),
+                    float(distance_xy[env_id].item()),
+                    float(altitude[env_id].item()),
+                ]
+            )
+        self._telemetry_rows_in_chunk += len(self._telemetry_env_ids)
+        self._telemetry_file.flush()
+        if self._telemetry_rows_in_chunk >= self._telemetry_chunk_steps:
+            self._telemetry_open_new_chunk()
 
     def close(self):
         executor = getattr(self, "_terrain_pool_executor", None)
         if executor is not None:
             executor.shutdown(wait=False, cancel_futures=True)
             self._terrain_pool_executor = None
+        telemetry_file = getattr(self, "_telemetry_file", None)
+        if telemetry_file is not None:
+            telemetry_file.close()
+            self._telemetry_file = None
         return super().close()
 
     def render(self, recompute: bool = False) -> np.ndarray | None:
@@ -337,31 +463,58 @@ class LunarLanderEnv(DirectRLEnv):
             hover_throttle
             + (self.cfg.max_commanded_throttle - hover_throttle) * raw_throttle,
         )
-        self._actions[:, 1:] = torch.clamp(self._actions[:, 1:], -1.0, 1.0)
+        # RCS thruster duties: [0, 1] only (not [-1, 1]) -- a<=0 means "off,"
+        # matching a real RCS jet resting idle at zero command and reusing
+        # SAC's zero-centered action init as a natural "no attitude
+        # authority commanded yet" start state (was the TVC gimbal command,
+        # centered at 0 = neutral gimbal angle; RCS has no such neutral
+        # angle, only on/off duty per fixed-direction jet).
+        rcs_duty = torch.clamp(self._actions[:, 1:], 0.0, 1.0)
+        self._actions[:, 1:] = rcs_duty
 
-        # The external thrust follows the *measured* two-axis TVC pose from
-        # hopper_lunar.xml, rather than teleporting to the requested action.
-        # This retains the authored servo stiffness/damping and keeps the
-        # rendered nozzle aligned with the force used by physics.
-        yaw_x = self._rocket.data.joint_pos[:, self._yaw_joint_ids].squeeze(-1)
-        pitch_y = self._rocket.data.joint_pos[:, self._pitch_joint_ids].squeeze(-1)
-        thrust_dir_b = torch.stack(
-            (
-                torch.sin(pitch_y),
-                -torch.sin(yaw_x) * torch.cos(pitch_y),
-                torch.cos(yaw_x) * torch.cos(pitch_y),
-            ),
-            dim=-1,
-        )
-        thrust_dir_b = thrust_dir_b / torch.clamp(torch.linalg.norm(thrust_dir_b, dim=-1, keepdim=True), min=1e-6)
         quat = _xyzw_to_wxyz(self._rocket.data.root_quat_w)
-        thrust_dir_w = _quat_rotate(quat, thrust_dir_b)
-        force_w = thrust_dir_w * (self._actions[:, 0:1] * self._max_thrust_n.unsqueeze(-1))
-        lever_b = torch.zeros_like(thrust_dir_b)
-        lever_b[:, 2] = -float(self.cfg.thrust_lever_arm_m)
-        lever_w = _quat_rotate(quat, lever_b)
+
+        # Fixed main engine: straight down the hopper's own -Z axis, no
+        # gimbal -- the force line passes through the body's Z-axis so it
+        # contributes zero torque about the CoM (replaces the old
+        # TVC-deflected thrust + lever-arm torque calc).
+        engine_dir_w = _quat_rotate(quat, self._engine_thrust_dir_b.unsqueeze(0).expand(self.num_envs, -1))
+        force_w = engine_dir_w * (self._actions[:, 0:1] * self._max_thrust_n.unsqueeze(-1))
+        torque_w = torch.zeros_like(force_w)
+
+        # RCS authority curriculum: same floor-to-ceiling-by-difficulty shape
+        # the TVC gimbal-angle ramp used, now scaling max per-thruster force
+        # instead (see curriculum_full_rcs_difficulty's cfg comment for why
+        # the shape -- not the TVC geometry -- is what's being reused).
+        # Stage 2 of the staged curriculum (see cfg.stage1_nav_only):
+        # freezes this at policy_max_rcs_thrust_n once a checkpoint has
+        # already learned RCS control at full authority, so resuming
+        # doesn't reset an already-calibrated action mapping back to the
+        # floor.
+        if self.cfg.curriculum_rcs_always_max:
+            rcs_frac = torch.ones_like(self._difficulty)
+        else:
+            rcs_frac = torch.clamp(
+                self._difficulty / max(self.cfg.curriculum_full_rcs_difficulty, 1e-6), 0.0, 1.0
+            )
+        rcs_authority_n = (
+            self.cfg.policy_min_rcs_thrust_n
+            + rcs_frac * (self.cfg.policy_max_rcs_thrust_n - self.cfg.policy_min_rcs_thrust_n)
+        ).unsqueeze(-1)
+
+        # 8 independent, fixed-direction jets (see rcs_thruster_layout):
+        # each contributes both a force (RCS does add a little net
+        # translation, not just torque -- not special-cased away) and a
+        # torque about the CoM from its fixed lever arm.
+        for i in range(self._rcs_pos_b.shape[0]):
+            dir_w_i = _quat_rotate(quat, self._rcs_dir_b[i].unsqueeze(0).expand(self.num_envs, -1))
+            pos_w_i = _quat_rotate(quat, self._rcs_pos_b[i].unsqueeze(0).expand(self.num_envs, -1))
+            force_w_i = dir_w_i * (rcs_duty[:, i : i + 1] * rcs_authority_n)
+            force_w = force_w + force_w_i
+            torque_w = torque_w + torch.cross(pos_w_i, force_w_i, dim=-1)
+
         self._forces[:, 0, :] = force_w
-        self._torques[:, 0, :] = torch.cross(lever_w, force_w, dim=-1)
+        self._torques[:, 0, :] = torque_w
 
     def _apply_action(self) -> None:
         self._rocket.permanent_wrench_composer.set_forces_and_torques(
@@ -370,21 +523,6 @@ class LunarLanderEnv(DirectRLEnv):
             body_ids=self._body_ids,
             is_global=True,
         )
-        gimbal_frac = torch.clamp(
-            self._difficulty / max(self.cfg.curriculum_full_gimbal_difficulty, 1e-6), 0.0, 1.0
-        )
-        max_gimbal = torch.deg2rad(
-            self.cfg.policy_min_gimbal_deg
-            + gimbal_frac * (self.cfg.policy_max_gimbal_deg - self.cfg.policy_min_gimbal_deg)
-        ).unsqueeze(-1)
-        self._joint_position_targets.zero_()
-        self._joint_position_targets[:, self._yaw_joint_ids] = (
-            self._actions[:, 1:2] * max_gimbal
-        )
-        self._joint_position_targets[:, self._pitch_joint_ids] = (
-            self._actions[:, 2:3] * max_gimbal
-        )
-        self._rocket.set_joint_position_target_index(target=self._joint_position_targets)
 
     def _get_observations(self) -> dict[str, torch.Tensor]:
         pos = self._rocket.data.root_pos_w
@@ -457,14 +595,17 @@ class LunarLanderEnv(DirectRLEnv):
         # singularity at d=0 (see the sign note on rew_wb_proximity_alpha).
         proximity = torch.pow(1.0 / (1.0 + distance_xy), cfg.rew_wb_proximity_beta)
 
-        # --- -T0 * e^(IMU theta) * altitude^zeta.  tilt_angle is the residual
+        # --- Bounded, always-positive attitude reward (was the board's literal
+        # -T0*e^(IMU theta)*altitude^zeta penalty). tilt_angle is the residual
         # attitude error against the local terrain normal, so matching a slope
-        # costs nothing; only deviating from it does.  e^theta - 1 keeps a
-        # perfectly aligned vehicle at exactly zero cost.
+        # costs nothing; e^(-theta) is 1 (max) when perfectly aligned and
+        # decays toward 0 as the residual grows, never negative -- an
+        # unbounded exponential penalty here gave SAC no ceiling to relax
+        # toward once already stable.
         altitude_factor = torch.pow(
             1.0 + altitude / cfg.max_altitude_m, cfg.rew_wb_tilt_altitude_zeta
         )
-        tilt_cost = (torch.exp(tilt_angle) - 1.0) * altitude_factor
+        tilt_reward = torch.exp(-tilt_angle) * altitude_factor
 
         # --- -h * (F_ayak / F_ayak_max)^c.  Real per-foot normal force from the
         # contact sensor where collision geometry exists; see _foot_normal_forces.
@@ -478,53 +619,208 @@ class LunarLanderEnv(DirectRLEnv):
         rel_y = torch.abs(delta_xy[:, 1])
 
         throttle_cmd = self._actions[:, 0]
-        gimbal_cmd = torch.linalg.norm(self._actions[:, 1:], dim=-1)
+        # RCS duty per thruster is already clamped to [0, 1] in
+        # _pre_physics_step; sum across all 8 for a fuel/control-effort
+        # measure (was gimbal_cmd = norm(yaw, pitch) under TVC).
+        rcs_duty = self._actions[:, 1:]
+
+        # --- Touchdown "readiness": a dense, near_ground-gated bonus that is
+        # only large when ALL SIX soft-landing axes are simultaneously close
+        # to their gate at once (a product of per-axis closeness scores, each
+        # in (0, 1], -> 1 only if every factor is near 1). Added because
+        # per-gate diagnostics across many full runs showed each individual
+        # gate (distance/horizontal/vertical/angular/tilt/foot) reaching
+        # 75-94% pass rate on its own, yet joint success_rate plateaued at
+        # ~22-29% -- the axes were fighting each other during the final
+        # braking maneuver (killing vertical speed fast tends to induce
+        # horizontal drift or tilt correction, etc.), so a policy that is
+        # "usually good on every axis separately" was still rarely good on
+        # all of them AT THE SAME INSTANT of touchdown. Rewarding terms
+        # individually can't fix that; only rewarding their conjunction can.
+        termination = self._last_termination_metrics
+        foot_spread = termination["foot_clearance_spread"]
+        # Dedicated, much tighter altitude gate than the shared `near_ground`
+        # (exp(-altitude/5.0), used for terrain-normal blending elsewhere) --
+        # rew_wb_readiness_weight was cut 8.0 -> 2.5 previously because at
+        # 8.0 a calm hover at 2-5m altitude (where near_ground/5.0 is still
+        # ~0.6-1.0) could bank most of this term's max reward without ever
+        # actually landing, nearly canceling the loiter penalty and keeping
+        # timeout_rate at 70-89%. This run's TensorBoard data confirms the
+        # opposite failure at weight=2.5 instead: the term is now so small
+        # (0.4-0.8/episode vs loiter's -145 to -180) that it does nothing to
+        # counteract the 6-gate joint-simultaneity problem it was added to
+        # solve -- success_rate erodes in lockstep with EVERY gate together
+        # whenever curriculum difficulty ticks up, exactly the pattern this
+        # term can't currently prevent. Narrowing the altitude scale from
+        # 5.0m to 1.2m means near_ground_tight is only non-negligible in the
+        # last ~1-2m of descent -- a calm hover at 2m+ (the previous exploit)
+        # now scores close to zero here, so the weight can go back up without
+        # reopening it.
+        near_ground_tight = torch.exp(-altitude / cfg.rew_wb_readiness_altitude_scale_m)
+        readiness = (
+            near_ground_tight
+            * torch.exp(-torch.pow(distance_xy / cfg.target_radius_m, 2))
+            * torch.exp(-torch.pow(horizontal_speed / cfg.soft_horizontal_speed_mps, 2))
+            * torch.exp(-torch.pow(vertical_speed / cfg.soft_vertical_speed_mps, 2))
+            * torch.exp(-torch.pow(angular_speed / cfg.soft_angular_speed_rps, 2))
+            * torch.exp(-torch.pow(tilt_angle / math.radians(cfg.soft_tilt_deg), 2))
+            * torch.exp(-torch.pow(foot_spread / cfg.landing_max_foot_clearance_m, 2))
+        )
 
         terms = {
             # + alpha * (1/(1+konum))^beta
             "proximity": dt * cfg.rew_wb_proximity_alpha * proximity,
-            # - T0 * e^(IMU theta) * altitude^zeta
-            "tilt": -dt * cfg.rew_wb_tilt_t0 * tilt_cost,
+            # + T0 * e^(-IMU theta) * altitude^zeta
+            "tilt": dt * cfg.rew_wb_tilt_t0 * tilt_reward,
             # - h * (F_ayak/F_ayak_max)^c
             "foot_load": -dt * cfg.rew_wb_foot_load_h * foot_load_cost,
             # - s0 * throttle^2
             "throttle": -dt * cfg.rew_wb_throttle_s0 * throttle_cmd * throttle_cmd,
             # - k_z * |z_hedef - z|  (altitude above the target's own surface)
             "altitude": -dt * cfg.rew_wb_altitude_k * altitude,
-            # - |tvc|^d
-            "tvc": -dt * cfg.rew_wb_tvc_weight * torch.pow(gimbal_cmd, cfg.rew_wb_tvc_d),
-            # - x1*(relative_x)^x2 - x4*(relative_y)^x3
-            "rel_xy": -dt
+            # - |rcs|^d: control-effort penalty summed over all 8 thrusters.
+            "rcs": -dt * cfg.rew_wb_rcs_weight * torch.sum(torch.pow(rcs_duty, cfg.rew_wb_rcs_d), dim=-1),
+            # Bounded, always-positive per-axis closeness reward (mirrors the
+            # proximity term's 1/(1+d) shape): weight_* at rel=0, ->0 far
+            # away. Replaces the board's literal -x1*(rel_x)^x2 penalty,
+            # which gave SAC no ceiling to relax toward once already close
+            # and converged to "hover nearby forever" across three full runs.
+            "rel_xy": dt
             * (
-                cfg.rew_wb_rel_x_weight * torch.pow(rel_x, cfg.rew_wb_rel_x_power)
-                + cfg.rew_wb_rel_y_weight * torch.pow(rel_y, cfg.rew_wb_rel_y_power)
+                cfg.rew_wb_rel_x_weight * torch.pow(1.0 / (1.0 + rel_x), cfg.rew_wb_rel_x_power)
+                + cfg.rew_wb_rel_y_weight * torch.pow(1.0 / (1.0 + rel_y), cfg.rew_wb_rel_y_power)
             ),
-            # - x5*(V_xy)^x6, plus the vertical/angular braking the board's
-            # "Dikey hiz < 1" and "Acisal hiz < 0.5" constraints require.
-            "velocity": -dt
+            # Bounded, always-positive "being slow" reward (was the board's
+            # literal -x5*(V_xy)^x6 penalty plus unbounded vertical/angular
+            # braking terms): each speed's 1/(1+v) is 1 (max) at a dead stop
+            # and ->0 as speed grows, still driving the board's "Dikey hiz <
+            # 1" / "Acisal hiz < 0.5" constraints without an unbounded penalty
+            # SAC has no ceiling to relax toward once already slow.
+            "velocity": dt
             * (
-                cfg.rew_wb_vxy_weight * torch.pow(horizontal_speed, cfg.rew_wb_vxy_power)
-                + cfg.rew_wb_vz_weight * torch.pow(vertical_speed, cfg.rew_wb_vz_power)
-                + cfg.rew_wb_angular_weight * angular_speed
+                cfg.rew_wb_vxy_weight * torch.pow(1.0 / (1.0 + horizontal_speed), cfg.rew_wb_vxy_power)
+                + cfg.rew_wb_vz_weight * torch.pow(1.0 / (1.0 + vertical_speed), cfg.rew_wb_vz_power)
+                + cfg.rew_wb_angular_weight / (1.0 + angular_speed)
+            ),
+            # Zeroed in stage1_nav_only mode: readiness rewards the 6
+            # SOFT-LANDING axes together, which is meaningless before the
+            # policy is even attempting to land -- see cfg.stage1_nav_only's
+            # comment for the staged-curriculum rationale.
+            "readiness": (
+                0.0 if cfg.stage1_nav_only else dt * cfg.rew_wb_readiness_weight * readiness
             ),
         }
 
-        termination = self._last_termination_metrics
-        terminal = (
-            termination["soft"].float() * self.cfg.rew_soft_landing
-            + termination["harsh"].float()
-            * (
-                self.cfg.rew_harsh_landing
-                + self.cfg.rew_landing_quality * termination["landing_quality"]
-            )
-            + termination["failed"].float() * self.cfg.rew_crash
-            + termination["timeout_only"].float() * self.cfg.rew_timeout
+        # Flat per-second cost for not having landed yet -- dense so SAC gets
+        # gradient every step instead of only at the terminal timeout penalty
+        # 20s later. Zeroed on the step touchdown happens so it never eats
+        # into the terminal soft/harsh payout.
+        #
+        # TESTED AND REJECTED: a rew_wb_loiter_grace_s=9.0s grace period
+        # (zero loiter cost before t=9s, theorized to let the policy spend
+        # the ~9s of lateral-accel budget needed to null a 1 m/s horizontal
+        # error at the ~4 deg gimbal floor before loiter pressures a rushed
+        # attempt). Result on a fresh run: whole-run success_rate 0.0%
+        # across all 484 log windows, gate_distance/horizontal/tilt/foot all
+        # collapsed to 3-7% (from 70-85% at the flat-loiter baseline), and
+        # mean_episode_length_s rose to 15.9-18.5s (near the 20s cap) --
+        # confirming the policy DID get more patient, but that patience
+        # never converted into better landings, it just delayed the same
+        # poor outcome. This is the third consecutive "give the policy more
+        # time/authority" intervention (after two gimbal-floor increases,
+        # see the archived TVC gimbal-authority history in
+        # LunarLanderEnvCfg) to collapse nearly every
+        # gate at once rather than improving the targeted one -- a pattern
+        # suggesting these changes disrupt some other dependency in the
+        # existing reward/training dynamics rather than validating or
+        # refuting the "not enough authority/time" theory itself. Reverted
+        # to the flat per-step cost.
+        # P2 fix (2026-09-18): the flat cost above was tested with a FIXED
+        # 9.0s grace period and collapsed training outright (see the
+        # TESTED-AND-REJECTED note) -- but per-difficulty TensorBoard
+        # analysis on the 07-46-02 run shows a different, altitude-SCALED
+        # mechanism: a safe descent at the soft_vertical_speed_mps gate
+        # takes altitude/soft_vertical_speed_mps seconds, and that minimum
+        # grows linearly with spawn altitude while loiter's cost over that
+        # same span grows just as fast -- at diff=0.2 (alt=5.4m) the
+        # required ~9s of patient descent already costs ~-90 loiter, which
+        # is where success_rate collapsed (95%->59% terminal-reward flip).
+        # The flat 9.0s grace failed because it was the SAME for every
+        # spawn altitude, including the ~0.05 difficulty episodes where 9s
+        # is far more slack than needed (loitering pays for exactly nothing
+        # useful there); this one is sized to THIS episode's own spawn
+        # altitude, so easy/low-altitude episodes get little or no grace
+        # (nothing to fix there) while only genuinely-high spawns get the
+        # extra patience budget their own physics requires.
+        loiter_grace_s = (
+            self._spawn_altitude_m
+            / max(cfg.soft_vertical_speed_mps, 1e-6)
+            * cfg.rew_wb_loiter_altitude_grace_frac
         )
+        elapsed_s = self.episode_length_buf.float() * dt
+        loiter_active = (elapsed_s > loiter_grace_s).float()
+        # Zeroed in stage1_nav_only mode: this penalizes not having LANDED
+        # yet, which has no meaning when landing isn't part of the task.
+        terms["loiter"] = (
+            0.0
+            if cfg.stage1_nav_only
+            else -dt
+            * cfg.rew_wb_loiter_penalty_per_s
+            * (~termination["landed"]).float()
+            * loiter_active
+        )
+        # slammed (landed too fast) previously shared "failed"'s flat
+        # rew_crash with no quality credit at all -- identical to flying off
+        # out of bounds. That gave zero signal distinguishing a well-placed,
+        # upright touchdown that was merely a bit too fast from a total miss,
+        # which likely pushed the policy toward excess caution on final
+        # descent. landing_quality's own vertical-speed term already decays
+        # sharply past crash_vertical_speed_mps, so reusing harsh's
+        # quality bonus here can't let a slam farm a positive net reward --
+        # worst case (bad position, fast) stays at rew_crash; best case (good
+        # position, just a bit too fast) lands around rew_crash + ~0.7 *
+        # rew_landing_quality, still clearly negative.
+        left_bounds = termination["left_bounds"].float()
+        slammed = termination["slammed"].float()
+        if cfg.stage1_nav_only:
+            # Stage 1 of the staged curriculum (see cfg.stage1_nav_only):
+            # keep the escape/out-of-bounds AND hard-impact penalties --
+            # flying away and slamming into the ground are both real
+            # navigation/control failures worth penalizing at the terminal
+            # level, not just through the dense foot_load estimate -- but
+            # drop the landing-QUALITY payouts (soft/harsh bonus, timeout),
+            # which reward or punish something this stage never attempts.
+            # FIXED 2026-09-18: an earlier version of this branch omitted
+            # `slammed` entirely, so a hard ground impact only cost the
+            # single-step foot_load estimate while escaping cost a full
+            # rew_crash -- on the very first live run this let
+            # failed_slammed_fraction/failed_left_bounds_fraction swing from
+            # 0.74/0.26 to 0.24/0.76 within 700k steps, consistent with the
+            # policy finding escaping cheaper than a hard landing under that
+            # lopsided accounting.
+            terminal = (left_bounds + slammed) * self.cfg.rew_crash
+        else:
+            terminal = (
+                termination["soft"].float() * self.cfg.rew_soft_landing
+                + termination["harsh"].float()
+                * (
+                    self.cfg.rew_harsh_landing
+                    + self.cfg.rew_landing_quality * termination["landing_quality"]
+                )
+                + slammed
+                * (
+                    self.cfg.rew_crash
+                    + self.cfg.rew_landing_quality * termination["landing_quality"]
+                )
+                + left_bounds * self.cfg.rew_crash
+                + termination["timeout_only"].float() * self.cfg.rew_timeout
+            )
         terms["terminal"] = terminal
         reward = sum(terms.values())
         terms["total"] = reward
         for name, value in terms.items():
             self._episode_reward_sums[name] += value
+        self._telemetry_log_step(pos, quat, lin_vel, ang_vel, distance_xy, altitude)
         return reward
 
     def _get_dones(self) -> tuple[torch.Tensor, torch.Tensor]:
@@ -547,24 +843,30 @@ class LunarLanderEnv(DirectRLEnv):
         timeout = self.episode_length_buf >= self.max_episode_length - 1
         escaped = (altitude > self.cfg.max_altitude_m) | (distance_xy > self.cfg.max_xy_m * 1.5)
         tilt_limit = 1.0 - math.cos(math.radians(self.cfg.soft_tilt_deg))
+        gate_distance = distance_xy <= self.cfg.target_radius_m
+        gate_horizontal = horizontal_speed <= self.cfg.soft_horizontal_speed_mps
+        gate_vertical = vertical_speed <= self.cfg.soft_vertical_speed_mps
+        gate_angular = angular_speed <= self.cfg.soft_angular_speed_rps
+        # tilt_penalty is judged against the local terrain normal near the
+        # ground (see _tilt_against_terrain), so this gates the residual
+        # attitude error after banking to match the slope -- not raw
+        # world-vertical tilt, which real terrain often can't satisfy.
+        gate_tilt = tilt_penalty <= tilt_limit
+        # On a natural slope the first foot touches before the highest foot.
+        # Judge whether the footprint fits the terrain by the spread, not by
+        # absolute clearance (which also includes touchdown margin). A rocket
+        # correctly banked to the local slope keeps this small regardless of
+        # the slope's magnitude; see tests/test_terrain_landability.py for the
+        # curvature-residual proof.
+        gate_foot = foot_clearance_spread <= self.cfg.landing_max_foot_clearance_m
         soft = (
             landed
-            & (distance_xy <= self.cfg.target_radius_m)
-            & (horizontal_speed <= self.cfg.soft_horizontal_speed_mps)
-            & (vertical_speed <= self.cfg.soft_vertical_speed_mps)
-            & (angular_speed <= self.cfg.soft_angular_speed_rps)
-            # tilt_penalty is judged against the local terrain normal near the
-            # ground (see _tilt_against_terrain), so this gates the residual
-            # attitude error after banking to match the slope -- not raw
-            # world-vertical tilt, which real terrain often can't satisfy.
-            & (tilt_penalty <= tilt_limit)
-            # On a natural slope the first foot touches before the highest
-            # foot. Judge whether the footprint fits the terrain by the spread,
-            # not by absolute clearance (which also includes touchdown margin).
-            # A rocket correctly banked to the local slope keeps this small
-            # regardless of the slope's magnitude; see
-            # tests/test_terrain_landability.py for the curvature-residual proof.
-            & (foot_clearance_spread <= self.cfg.landing_max_foot_clearance_m)
+            & gate_distance
+            & gate_horizontal
+            & gate_vertical
+            & gate_angular
+            & gate_tilt
+            & gate_foot
         )
         landing_quality = (
             0.45 * torch.exp(-distance_xy / 2.0)
@@ -575,7 +877,8 @@ class LunarLanderEnv(DirectRLEnv):
         # Whiteboard "Kisitlar": dikey hiz < 1. A touchdown faster than that is
         # a structural failure, not merely a low-quality landing.
         slammed = landed & (vertical_speed > self.cfg.crash_vertical_speed_mps)
-        failed = ((out_of_bounds | escaped) & ~landed) | slammed
+        left_bounds = (out_of_bounds | escaped) & ~landed
+        failed = left_bounds | slammed
         harsh = landed & ~soft & ~slammed
         terminated = landed | failed
         self._last_termination_metrics = {
@@ -584,6 +887,12 @@ class LunarLanderEnv(DirectRLEnv):
             "failed": failed.detach(),
             "landed": landed.detach(),
             "out_of_bounds": out_of_bounds.detach(),
+            # Failure-type breakdown -- "failed" conflates two very different
+            # things (flying off / out of bounds vs. a too-fast touchdown);
+            # see _reset_idx's Metrics/failed_slammed_fraction /
+            # failed_left_bounds_fraction logging.
+            "slammed": slammed.detach(),
+            "left_bounds": left_bounds.detach(),
             "timeout_only": (timeout & ~terminated).detach(),
             "distance_xy": distance_xy.detach(),
             "horizontal_speed": horizontal_speed.detach(),
@@ -592,6 +901,15 @@ class LunarLanderEnv(DirectRLEnv):
             "tilt_penalty": tilt_penalty.detach(),
             "landing_quality": landing_quality.detach(),
             "foot_clearance_spread": foot_clearance_spread.detach(),
+            # Per-gate pass/fail, to diagnose WHICH soft-landing constraint is
+            # the actual bottleneck among episodes that do touch down (landed)
+            # but miss "soft" -- see _reset_idx's Metrics/gate_* logging.
+            "gate_distance": gate_distance.detach(),
+            "gate_horizontal": gate_horizontal.detach(),
+            "gate_vertical": gate_vertical.detach(),
+            "gate_angular": gate_angular.detach(),
+            "gate_tilt": gate_tilt.detach(),
+            "gate_foot": gate_foot.detach(),
         }
         return terminated, timeout
 
@@ -608,6 +926,17 @@ class LunarLanderEnv(DirectRLEnv):
             log["Metrics/success_rate"] = metrics["soft"][completed_env_ids].float().mean().item()
             log["Metrics/harsh_landing_rate"] = metrics["harsh"][completed_env_ids].float().mean().item()
             log["Metrics/failure_rate"] = metrics["failed"][completed_env_ids].float().mean().item()
+            # Breakdown of WHICH kind of failure: flying off / out of bounds
+            # vs. a too-fast (slammed) touchdown. As a fraction of ALL failed
+            # episodes (not all episodes), so the two always sum to 1.0.
+            failed_ids = completed_env_ids[metrics["failed"][completed_env_ids]]
+            if len(failed_ids) > 0:
+                log["Metrics/failed_slammed_fraction"] = (
+                    metrics["slammed"][failed_ids].float().mean().item()
+                )
+                log["Metrics/failed_left_bounds_fraction"] = (
+                    metrics["left_bounds"][failed_ids].float().mean().item()
+                )
             log["Metrics/timeout_rate"] = metrics["timeout_only"][completed_env_ids].float().mean().item()
             log["Metrics/mean_landing_speed"] = metrics["vertical_speed"][completed_env_ids].mean().item()
             log["Metrics/mean_horizontal_speed"] = metrics["horizontal_speed"][completed_env_ids].mean().item()
@@ -618,6 +947,21 @@ class LunarLanderEnv(DirectRLEnv):
             log["Metrics/mean_episode_length_s"] = (
                 self.episode_length_buf[completed_env_ids].float().mean().item() * self.step_dt
             )
+            # Among episodes that actually touched down (landed, whether soft
+            # or harsh), what fraction pass EACH individual soft-landing gate
+            # -- pinpoints which constraint is the real bottleneck instead of
+            # guessing from the combined soft/harsh rates alone.
+            landed_ids = completed_env_ids[metrics["landed"][completed_env_ids]]
+            if len(landed_ids) > 0:
+                for gate in (
+                    "gate_distance",
+                    "gate_horizontal",
+                    "gate_vertical",
+                    "gate_angular",
+                    "gate_tilt",
+                    "gate_foot",
+                ):
+                    log[f"Metrics/{gate}_pass_rate"] = metrics[gate][landed_ids].float().mean().item()
             if self.cfg.curriculum_enabled:
                 self._curriculum_window_count += len(completed_env_ids)
                 self._curriculum_window_successes += int(
@@ -677,7 +1021,16 @@ class LunarLanderEnv(DirectRLEnv):
             else:
                 self._rocket_mass_kg[env_ids] = self.cfg.rocket_mass_kg
                 self._max_thrust_n[env_ids] = self.cfg.max_thrust_n
-        target_xy_range = self.cfg.target_xy_min_range_m + difficulty * (
+        # Geometric (spawn/target reach) ramp deliberately slower than the
+        # RCS-authority ramp in _pre_physics_step, which stays linear in
+        # `difficulty` -- see curriculum_distance_ramp_power's cfg comment
+        # for the TensorBoard evidence (success_rate 0.336 -> 0.14-0.18
+        # plateau, never recovering, immediately after curriculum_level
+        # crossed 0.2 under the archived TVC gimbal-authority ramp) that a
+        # linear geometric ramp outpaces a still-mostly-floor attitude
+        # authority early in the curriculum.
+        difficulty_geo = torch.pow(difficulty, self.cfg.curriculum_distance_ramp_power)
+        target_xy_range = self.cfg.target_xy_min_range_m + difficulty_geo * (
             self.cfg.target_xy_range_m - self.cfg.target_xy_min_range_m
         )
         target_offset = (
@@ -685,17 +1038,55 @@ class LunarLanderEnv(DirectRLEnv):
             * target_xy_range.unsqueeze(-1)
         )
         target_xy = origins[:, :2] + target_offset
-        spawn_xy_range = self.cfg.spawn_xy_min_range_m + difficulty * (
+        spawn_xy_range = self.cfg.spawn_xy_min_range_m + difficulty_geo * (
             self.cfg.spawn_xy_range_m - self.cfg.spawn_xy_min_range_m
         )
         spawn_offset = (
             torch.empty(count, 2, device=self.device).uniform_(-1.0, 1.0)
             * spawn_xy_range.unsqueeze(-1)
         )
-        spawn_altitudes = self.cfg.spawn_altitude_min_m + difficulty * (
+        # Feasibility clip: spawn_xy_range and the curriculum's commandable
+        # RCS authority (_pre_physics_step's rcs_frac) both ramp with
+        # `difficulty`, but nothing previously checked they ramp at MATCHED
+        # rates -- a curriculum level can hand out a spawn offset the
+        # currently-available lateral acceleration cannot null out in the
+        # episode's time budget, which is a physically un-landable draw, not
+        # a policy failure. That silently inflates timeout_rate. Bound the
+        # sampled horizontal offset to what a bang-bang (accelerate then
+        # brake) maneuver can cover at THIS env's own attitude authority
+        # within curriculum_feasible_time_frac of the episode: for max
+        # lateral accel a = g*tan(max_effective_tilt_deg) and travel time t,
+        # reachable distance is a*(t/2)^2. Direction is preserved, only
+        # magnitude is capped. max_effective_tilt_deg is NOT physically
+        # derived from RCS authority the way the old gimbal angle was -- see
+        # its cfg comment -- so this clip is an untuned placeholder pending
+        # real RCS telemetry.
+        max_lateral_accel = abs(float(self.cfg.sim.gravity[2])) * math.tan(
+            math.radians(self.cfg.max_effective_tilt_deg)
+        )
+        travel_time_s = self.cfg.episode_length_s * self.cfg.curriculum_feasible_time_frac
+        max_reach_m = max_lateral_accel * (travel_time_s / 2.0) ** 2
+        spawn_dist = torch.linalg.norm(spawn_offset, dim=-1)
+        reach_scale = torch.clamp(max_reach_m / torch.clamp(spawn_dist, min=1e-6), max=1.0)
+        spawn_offset = spawn_offset * reach_scale.unsqueeze(-1)
+        # P1 fix (2026-09-18): was linear in `difficulty` while spawn/target
+        # XY range switched to difficulty_geo (difficulty**power) earlier --
+        # that made curriculum_level a near-pure ALTITUDE ramp (at diff=0.2,
+        # spawn_off_max was only 0.48m but altitude was already 5.4m).
+        # Per-difficulty TensorBoard breakdown on the 07-46-02 run showed the
+        # collapse starting exactly there: mean_episode_length_s jumped
+        # 7.4s->15.6s and Episode_Reward/terminal flipped +95->-78 the
+        # moment altitude crossed ~5m, while every soft-landing gate was
+        # still >70% -- horizontal precision was never the bottleneck at
+        # that difficulty, vertical descent time-vs-loiter was. Switching
+        # altitude to the same difficulty_geo keeps it in step with the
+        # (already fixed) geometric ramp instead of outracing it.
+        spawn_altitudes = self.cfg.spawn_altitude_min_m + difficulty_geo * (
             self.cfg.spawn_altitude_m - self.cfg.spawn_altitude_min_m
         )
         self._randomize_terrain(env_ids, origins[:, :2])
+        log = self.extras.setdefault("log", {})
+        log["Curriculum/spawn_reach_clip_fraction"] = (reach_scale < 1.0).float().mean().item()
         root_state[:, :2] = target_xy + spawn_offset
         root_state[:, 2] = self._upright_root_height(root_state[:, :2]) + spawn_altitudes
         # write_root_pose_to_sim expects (x, y, z, w); this is identity (no rotation).
@@ -703,6 +1094,17 @@ class LunarLanderEnv(DirectRLEnv):
         # a 180 deg roll about world X, i.e. the rocket spawns upside down.
         root_state[:, 3:7] = torch.tensor((0.0, 0.0, 0.0, 1.0), device=self.device)
         root_state[:, 7:] = 0.0
+        # "Orbital mechanics" spawn cue: instead of spawning stationary, give
+        # the rocket a randomized horizontal drift velocity to null out
+        # during descent -- like an approach/deorbit trajectory rather than
+        # a free hover-drop. Ramped by difficulty_geo like spawn/target
+        # range (0 at difficulty=0); vertical/angular velocity stay at 0.
+        spawn_speed = self.cfg.spawn_lateral_speed_min_mps + difficulty_geo * (
+            self.cfg.spawn_lateral_speed_max_mps - self.cfg.spawn_lateral_speed_min_mps
+        )
+        spawn_heading = torch.empty(count, device=self.device).uniform_(0.0, 2.0 * torch.pi)
+        root_state[:, 7] = spawn_speed * torch.cos(spawn_heading)
+        root_state[:, 8] = spawn_speed * torch.sin(spawn_heading)
         self._rocket.write_root_pose_to_sim(root_state[:, :7], env_ids)
         self._rocket.write_root_velocity_to_sim(root_state[:, 7:], env_ids)
         joint_pos = self._rocket.data.default_joint_pos[env_ids].clone()
@@ -710,7 +1112,6 @@ class LunarLanderEnv(DirectRLEnv):
         joint_pos.zero_()
         joint_vel.zero_()
         self._rocket.write_joint_state_to_sim(joint_pos, joint_vel, env_ids=env_ids)
-        self._joint_position_targets[env_ids] = 0.0
 
         self._target_pos_w[env_ids, :2] = target_xy
         self._target_pos_w[env_ids, 2] = self._upright_root_height(target_xy)
@@ -723,6 +1124,7 @@ class LunarLanderEnv(DirectRLEnv):
             dim=-1,
         )
         self._previous_altitude[env_ids] = spawn_altitudes
+        self._spawn_altitude_m[env_ids] = spawn_altitudes
 
     def _randomize_terrain(self, env_ids: torch.Tensor, origins_xy: torch.Tensor) -> None:
         """Assign cached terrain slots without generating terrain on the reset path."""

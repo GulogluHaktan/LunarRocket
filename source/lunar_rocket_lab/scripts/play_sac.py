@@ -61,9 +61,9 @@ def main() -> None:
         env_cfg.seed = agent_cfg["seed"]
         env_cfg.sim.device = args_cli.device if args_cli.device is not None else env_cfg.sim.device
         env_cfg.curriculum_enabled = False
-        if os.environ.get("ISAACLAB_WATCH_POLICY_GIMBAL_DEG"):
-            env_cfg.policy_max_gimbal_deg = float(
-                os.environ["ISAACLAB_WATCH_POLICY_GIMBAL_DEG"]
+        if os.environ.get("ISAACLAB_WATCH_POLICY_RCS_THRUST_N"):
+            env_cfg.policy_max_rcs_thrust_n = float(
+                os.environ["ISAACLAB_WATCH_POLICY_RCS_THRUST_N"]
             )
         if args_cli.num_envs is not None and args_cli.num_envs <= 4:
             env_cfg.spawn_altitude_m = float(os.environ.get("ISAACLAB_WATCH_SPAWN_ALTITUDE", "8.0"))

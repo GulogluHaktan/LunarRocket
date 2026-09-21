@@ -81,11 +81,11 @@ class TerrainLandabilityTests(unittest.TestCase):
         # for which way to bank to align with _tilt_against_terrain's target.
         self.assertIn("grad_x_norm = torch.clamp(grad_x / 0.5", self.source)
         self.assertIn("grad_y_norm = torch.clamp(grad_y / 0.5", self.source)
-        self.assertIn("observation_space = 125", self.source)
+        self.assertIn("observation_space = 137", self.source)
 
-    def test_gimbal_authority_ramps_with_curriculum_instead_of_fixed_full_range(self) -> None:
-        self.assertIn("curriculum_full_gimbal_difficulty", self.source)
-        self.assertIn("gimbal_frac = torch.clamp(", self.source)
+    def test_rcs_authority_ramps_with_curriculum_instead_of_fixed_full_range(self) -> None:
+        self.assertIn("curriculum_full_rcs_difficulty", self.source)
+        self.assertIn("rcs_frac = torch.clamp(", self.source)
 
     def test_timeout_penalty_is_worse_than_the_best_possible_harsh_landing(self) -> None:
         # Otherwise SAC learns hovering to timeout is competitive with (or

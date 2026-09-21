@@ -219,12 +219,12 @@ tests/
 
 ## 6. Observation, reward, and termination
 
-The policy observation is a flat 125-value vector:
+The policy observation is a flat 137-value vector:
 
-- 29 proprioceptive/navigation values (position/velocity/orientation/angular
+- 41 proprioceptive/navigation values (position/velocity/orientation/angular
   velocity/body-frame acceleration relative to the target, current + previous
-  action, and the target's local terrain slope magnitude *and* direction,
-  roughness, and safe-zone score).
+  9-dim action [throttle + 8 RCS thruster duties], and the target's local
+  terrain slope magnitude *and* direction, roughness, and safe-zone score).
 - 64 terrain-relative LiDAR range samples.
 - 24 local terrain scan samples.
 - 8 sensor features: body-frame accelerometer, gyro, altimeter, and nearest
@@ -272,12 +272,47 @@ are set to counter-intuitive-looking values) directly in
 up to date as the reward has been iterated on.
 
 A **curriculum** ramps spawn distance, target distance, and the policy's
-gimbal-command authority together as success rate improves (advances when a
+RCS thruster authority together as success rate improves (advances when a
 rolling window's success rate clears `curriculum_success_threshold`, backs
 off on sustained underperformance). The window size scales with `num_envs`
 so it can't be satisfied by a handful of resets at high env counts, and the
-policy-commandable gimbal range ramps smoothly across the *entire*
-curriculum range rather than saturating early.
+policy-commandable RCS authority ramps smoothly across the *entire*
+curriculum range rather than saturating early. Spawn also carries a
+randomized horizontal drift velocity (an "orbital approach" cue -- the
+rocket starts mid-descent with lateral velocity to null out, not
+stationary), ramped by the same curriculum.
+
+**TVC -> RCS conversion.** The rocket used to steer via a two-axis
+thrust-vectored (gimballed) main engine; it now has a fixed main engine
+(throttle only, no gimbal) plus an 8-thruster reaction-control (RCS) ring
+near the top of the body for all attitude control (`rcs_thruster_layout` in
+`lunar_lander_env_cfg.py`, and the `rcs_0`..`rcs_7` sites in
+`assets/rocket/hopper_lunar.xml`). This was a direct response to the
+gimbal-authority ceiling documented below: TVC coupled lateral control
+authority to `g * tan(gimbal_angle)` at hover throttle, and every attempt to
+raise that angle past ~4-8 deg collapsed training outright (see the archived
+history in `lunar_lander_env_cfg.py`'s comments). RCS decouples attitude
+torque from throttle entirely. The RCS authority curriculum
+(`policy_min/max_rcs_thrust_n`, `curriculum_full_rcs_difficulty`) and the
+`rew_wb_rcs_*` control-effort reward term are fresh designs, not retuned
+from real training data yet -- treat their defaults as untrained starting
+points.
+
+```
+        rcs_1 (CW)   rcs_2 (CCW)   rcs_3 (CW)
+              \        |        /
+  rcs_0 (CCW)--+------[top ring]------+--rcs_4 (CCW)
+              /        |        \
+        rcs_7 (CW)   rcs_6 (CCW)   rcs_5 (CW)
+
+                 |    main body   |
+                 |  (cylinder)    |
+                 |________________|
+                    |   engine   |     <- fixed, straight down (-Z),
+                    |  (thrust)  |        no gimbal
+                     \    |    /
+                4 legs + feet (unchanged)
+```
 
 **A previous training collapse and its fix, for reference.** The most recent
 run in this repo's logs (`logs/sb3_sac/.../2026-08-06_13-01-55`) shows
@@ -295,20 +330,26 @@ HEAD` if you want to see the before/after):
    before it had learned anything, because the value/critic targets
    dominated the SAC update scale. Fixed in
    `agents/sb3_sac_cfg.yaml` via `normalize_value: true`, a wider
-   `target_entropy: -1.5` (default is `-action_dim = -3`, which pushed
-   entropy down even harder combined with the scale problem), and
+   `target_entropy: -1.5` (default is `-action_dim`, `-3` at the time of
+   this incident under the old 3-dim TVC action space -- action_dim is now
+   9 after the TVC->RCS conversion, so SB3's default heuristic would compute
+   differently today; `target_entropy: -1.5` stays an explicit override
+   either way, which pushed entropy down even harder combined with the
+   scale problem), and
    `gradient_steps: 32` (one update per vector step under-trains SAC when
    a vector step already contributes `num_envs` transitions).
 2. **Gimbal-authority cliff at the curriculum level this run happened to
-   plateau at.** The policy-commandable gimbal range used to ramp to full
-   authority by a fixed, low curriculum level; once curriculum difficulty
-   (which the window logic above computed independently) reached that
-   level, the hardest episodes in the batch suddenly got much larger
-   torque authority than the still-undertrained policy could handle. Fixed
-   via `curriculum_full_gimbal_difficulty = 1.0` (spreads the ramp across
-   the *entire* curriculum range instead of saturating early) and
-   widening the curriculum window so difficulty can't outrace what the
-   policy has actually demonstrated.
+   plateau at.** (Historical -- this run predates the TVC->RCS conversion
+   above; the mechanism and fix shape now apply to RCS authority instead,
+   see `curriculum_full_rcs_difficulty`.) The policy-commandable gimbal
+   range used to ramp to full authority by a fixed, low curriculum level;
+   once curriculum difficulty (which the window logic above computed
+   independently) reached that level, the hardest episodes in the batch
+   suddenly got much larger torque authority than the still-undertrained
+   policy could handle. Fixed via `curriculum_full_gimbal_difficulty = 1.0`
+   (spreads the ramp across the *entire* curriculum range instead of
+   saturating early) and widening the curriculum window so difficulty
+   can't outrace what the policy has actually demonstrated.
 
 If you see the same signature again in a new run's TensorBoard logs
 (`Curriculum/difficulty` stuck, `Metrics/success_rate` collapsing,

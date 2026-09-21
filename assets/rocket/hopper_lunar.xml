@@ -110,56 +110,41 @@
                   size="0.015"
                   rgba="1 1 0 1"/>
 
-            <body name="tvc_yaw" pos="0 0 -0.150">
-                <inertial pos="0 0 0"
-                          mass="0.01"
-                          diaginertia="0.001 0.001 0.001"/>
-                <joint name="tvc_yaw_joint"
-                       type="hinge"
-                       axis="1 0 0"
-                       range="-25 25"
-                       damping="0.1"
-                       armature="0.002"
-                       frictionloss="0.005"/>
+            <!-- Fixed main engine: replaces the old tvc_yaw/tvc_pitch gimbal
+                 bodies+joints. No joints, no actuators; thrust is always
+                 straight down the hopper's own -Z axis, so it passes through
+                 the body's Z-axis and contributes zero torque about the CoM.
+                 All attitude control now comes from the RCS ring below;
+                 forces/torques for both are computed in Python
+                 (LunarLanderEnv._pre_physics_step) from this site's and the
+                 rcs_* sites' fixed local positions, not from MJCF actuators. -->
+            <geom name="engine"
+                  type="cylinder"
+                  pos="0 0 -0.175"
+                  size="0.04 0.02"
+                  material="engine_mat"
+                  contype="0"
+                  conaffinity="0"/>
+            <site name="thrust_site"
+                  pos="0 0 -0.250"
+                  size="0.02"
+                  rgba="1 0.5 0 1"/>
 
-                <body name="tvc_pitch">
-                    <inertial pos="0 0 0"
-                              mass="0.02"
-                              diaginertia="0.0002 0.0002 0.0002"/>
-                    <joint name="tvc_pitch_joint"
-                           type="hinge"
-                           axis="0 1 0"
-                           range="-25 25"
-                           damping="0.1"
-                           armature="0.002"
-                           frictionloss="0.005"/>
-
-                    <geom name="engine"
-                          type="cylinder"
-                          pos="0 0 -0.025"
-                          size="0.04 0.02"
-                          material="engine_mat"
-                          contype="0"
-                          conaffinity="0"/>
-                    <site name="thrust_site"
-                          pos="0 0 -0.10"
-                          size="0.02"
-                          rgba="1 0.5 0 1"/>
-                </body>
-            </body>
+            <!-- RCS thruster ring: 8 fixed-direction jets near the top of
+                 main_body, 45deg apart, firing tangentially. Direction
+                 alternates CCW/CW (even index = CCW, odd index = CW) so the
+                 ring has bidirectional torque authority about all three body
+                 axes; see rcs_thruster_layout in LunarLanderEnvCfg for the
+                 authoritative direction vectors consumed by the env; these
+                 sites are reference/visual markers only, not MJCF actuators. -->
+            <site name="rcs_0" pos="0.070 0.000 0.40" size="0.012" rgba="0.2 0.6 1 1"/>   <!-- CCW -->
+            <site name="rcs_1" pos="0.0495 0.0495 0.40" size="0.012" rgba="1 0.6 0.2 1"/> <!-- CW -->
+            <site name="rcs_2" pos="0.000 0.070 0.40" size="0.012" rgba="0.2 0.6 1 1"/>   <!-- CCW -->
+            <site name="rcs_3" pos="-0.0495 0.0495 0.40" size="0.012" rgba="1 0.6 0.2 1"/><!-- CW -->
+            <site name="rcs_4" pos="-0.070 0.000 0.40" size="0.012" rgba="0.2 0.6 1 1"/>  <!-- CCW -->
+            <site name="rcs_5" pos="-0.0495 -0.0495 0.40" size="0.012" rgba="1 0.6 0.2 1"/><!-- CW -->
+            <site name="rcs_6" pos="0.000 -0.070 0.40" size="0.012" rgba="0.2 0.6 1 1"/>  <!-- CCW -->
+            <site name="rcs_7" pos="0.0495 -0.0495 0.40" size="0.012" rgba="1 0.6 0.2 1"/><!-- CW -->
         </body>
     </worldbody>
-
-    <actuator>
-        <position name="tvc_yaw_servo"
-                  joint="tvc_yaw_joint"
-                  kp="10"
-                  ctrlrange="-25 25"
-                  forcerange="-2.5 2.5"/>
-        <position name="tvc_pitch_servo"
-                  joint="tvc_pitch_joint"
-                  kp="10"
-                  ctrlrange="-25 25"
-                  forcerange="-2.5 2.5"/>
-    </actuator>
 </mujoco>

@@ -120,7 +120,8 @@ def main() -> None:
                         # (base_rigid_object_data.py: QUAT_XYZW_ELEMENT_NAMES) -- logged
                         # in that same native order, not (w, x, y, z).
                         "quat_x", "quat_y", "quat_z", "quat_w",
-                        "action_throttle", "action_gimbal_yaw", "action_gimbal_pitch",
+                        "action_throttle",
+                        *[f"action_rcs_{i}" for i in range(len(self._raw_env.cfg.rcs_thruster_layout))],
                         "vz", "reward",
                     ]
                 )
@@ -204,6 +205,10 @@ def main() -> None:
             env_cfg.curriculum_initial_difficulty = float(
                 os.environ["ISAACLAB_CURRICULUM_INITIAL_DIFFICULTY"]
             )
+        if os.environ.get("ISAACLAB_STAGE1_NAV_ONLY", "0").lower() in {"1", "true", "yes"}:
+            env_cfg.stage1_nav_only = True
+        if os.environ.get("ISAACLAB_CURRICULUM_RCS_ALWAYS_MAX", "0").lower() in {"1", "true", "yes"}:
+            env_cfg.curriculum_rcs_always_max = True
         agent_cfg["seed"] = args_cli.seed if args_cli.seed is not None else agent_cfg["seed"]
         if args_cli.max_iterations is not None:
             steps_per_iteration = int(agent_cfg.pop("steps_per_iteration", 32))
@@ -305,7 +310,9 @@ def main() -> None:
 
         callbacks = [
             EpisodeMetricsCallback(),
-            EntCoefFloorCallback(),
+            EntCoefFloorCallback(
+                floor=float(os.environ.get("ISAACLAB_ENT_COEF_FLOOR", "0.005"))
+            ),
             CheckpointCallback(
                 save_freq=max(1, 500_000 // env_cfg.scene.num_envs),
                 save_path=log_dir,

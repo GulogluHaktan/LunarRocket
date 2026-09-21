@@ -5,8 +5,11 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 ## What this is
 
 Isaac Lab direct-workflow RL task: a SAC (Soft Actor-Critic) policy learns to land a 4-legged
-hopper rocket with a two-axis thrust-vectored (gimballed) engine on real cratered/sloped lunar
-terrain at a randomized target. The one task that matters is
+hopper rocket on real cratered/sloped lunar terrain at a randomized target. The rocket has a
+fixed (non-gimballed) main engine for throttle and an 8-thruster RCS (reaction control system)
+ring for all attitude control — this replaced an earlier two-axis thrust-vectored (TVC) gimbal
+design; see `rcs_thruster_layout` in `lunar_lander_env_cfg.py` and the archived TVC-authority
+history preserved in that file's comments for why. The one task that matters is
 `LunarRocket-Lander-Direct-v0`, registered and implemented under `source/lunar_rocket_lab/`.
 
 Training requires Isaac Lab/Isaac Sim + a CUDA GPU and normally runs in Docker or a native
@@ -59,7 +62,7 @@ know which one you're editing:
      setup, observation/reward/termination logic, curriculum. This is the single source of
      truth for reward weights and their rationale (read the inline comments before changing any
      `rew_*` field or curriculum constant — several values look counter-intuitive on purpose,
-     e.g. `curriculum_full_gimbal_difficulty = 1.0`, `target_entropy: -1.5` in the SAC config,
+     e.g. `curriculum_full_rcs_difficulty = 1.0`, `target_entropy: -1.5` in the SAC config,
      documented as fixes for a specific training collapse in README.md section 6).
    - `lunar_rocket_lab/tasks/direct/lunar_lander/agents/sb3_sac_cfg.yaml` /
      `sb3_ppo_cfg.yaml` — SB3 hyperparameters, registered as `sb3_sac_cfg_entry_point` /
@@ -101,19 +104,37 @@ upload/assignment logic) and `app/terrain_pool.py` / `app/terrain_generator.py` 
 generation), and why `tests/test_terrain_pool.py` and `tests/test_terrain_landability.py` exist
 as fast CPU-only checks of that generation logic.
 
-**Curriculum.** Spawn distance, target distance, and the policy's commandable gimbal authority
-ramp together as a rolling-window success rate improves (`curriculum_success_threshold`,
-`curriculum_window_episodes`, `curriculum_increment` in `LunarLanderEnvCfg`). The window size
-scales with `num_envs` so it can't be satisfied by a handful of resets at high env counts —
-this was the direct fix for a documented training collapse (README.md section 6); don't
-reintroduce a fixed/small window without accounting for that.
+**Curriculum.** Spawn distance, target distance, and the policy's commandable RCS thruster
+authority (`policy_min/max_rcs_thrust_n`, ramped by `curriculum_full_rcs_difficulty` — replaced
+an earlier gimbal-angle authority ramp when TVC was swapped for RCS; see `lunar_lander_env_cfg.py`'s
+archived TVC-authority history for why the *shape* of that ramp was kept) all ramp together as a
+rolling-window success rate improves (`curriculum_success_threshold`, `curriculum_window_episodes`,
+`curriculum_increment` in `LunarLanderEnvCfg`). The window size scales with `num_envs` so it can't
+be satisfied by a handful of resets at high env counts — this was the direct fix for a documented
+training collapse (README.md section 6); don't reintroduce a fixed/small window without accounting
+for that. Spawn also gets a randomized horizontal drift velocity (`spawn_lateral_speed_min/max_mps`,
+also ramped by difficulty) — the rocket starts mid-descent with lateral velocity to null out,
+rather than stationary.
 
-**Reward.** Dense + terminal:
-`reward = xy_progress + altitude_progress + stability + velocity + guidance + control + terrain + time + terminal`.
-`terminal` is a one-time-per-episode payout based on landing classification (`soft`/`harsh`/
-`failed`/`timeout`), gated on foot contact, tilt against the *local terrain normal* (not
-world-vertical), and speed/footprint-fit thresholds. Weight/threshold changes should be
-validated against `tests/test_isaaclab_static.py`, which asserts on literal source strings in
+**Reward.** A hand-derived "whiteboard model" (dense terms named `rew_wb_*` in
+`LunarLanderEnvCfg`, replacing an earlier ad hoc dense-progress formula): dense
+`proximity + tilt + foot_load + throttle + altitude + rcs + rel_xy + velocity + readiness +
+loiter`, plus a one-time-per-episode `terminal` payout based on landing classification
+(`soft`/`harsh`/`slammed`/`left_bounds`/`timeout`), gated on foot contact, tilt against the
+*local terrain normal* (not world-vertical), and speed/footprint-fit thresholds. `rcs` is a
+control-effort penalty summed over the 8 independent RCS thruster duties (`rew_wb_rcs_d`/
+`_weight`; replaced a gimbal-command-norm penalty when TVC became RCS — see "What this is").
+`rel_xy` and
+`velocity` are deliberately bounded/always-positive (`1/(1+x)` shaped) rather than literal
+unbounded whiteboard penalties — an earlier unbounded version gave SAC no ceiling to relax
+toward once already close/slow and converged to "hover nearby forever" across three full runs;
+see the inline comments on those terms before reverting the shape. `loiter` is altitude-scaled
+(grace period ∝ spawn altitude) after a fixed grace period collapsed training outright — see the
+"TESTED AND REJECTED" comment block above `terms["loiter"]` for the full experiment history
+before re-tuning it. `cfg.stage1_nav_only` (default `False`) is a staged-curriculum switch that
+zeroes the landing-quality/readiness/loiter terms so an earlier training stage can drill pure
+navigation before landing enters the reward at all. Weight/threshold changes should be validated
+against `tests/test_isaaclab_static.py`, which asserts on literal source strings in
 `lunar_lander_env.py` (string/AST-based checks, not behavioral) — update both together.
 
 **Test suite is static-only.** All five files under `tests/` are logic/string/AST checks on
@@ -124,8 +145,11 @@ unless the user is driving it on their own GPU machine.
 
 ## Notes
 
-- `LunarRocket.zip` and `recovered/` in the repo root are not part of the source tree — ignore
-  them unless the user specifically asks about them.
+- `LunarRocket.zip`, `recovered/`, and `TRAINING_STATUS.md` in the repo root are not part of the
+  source tree — ignore them unless the user specifically asks about them. `TRAINING_STATUS.md`
+  in particular is a dated, freeform session log of one training run's experiment history (in
+  Turkish); useful as a pointer to what's already been tried, but not authoritative — the actual
+  current config is whatever's in `lunar_lander_env_cfg.py`.
 - `test_two_tier_terrain.py` in the repo root is a standalone legacy `app/`-terrain check, run
   directly (`python3 test_two_tier_terrain.py`); it is *not* picked up by
   `python3 -m unittest discover -s tests`.

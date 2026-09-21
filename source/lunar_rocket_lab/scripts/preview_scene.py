@@ -71,7 +71,9 @@ def main() -> None:
         unwrapped = env.unwrapped
         env.reset()
         _set_camera_on_first_rocket(unwrapped)
-        preview_action = torch.zeros((unwrapped.num_envs, 3), device=unwrapped.device)
+        preview_action = torch.zeros(
+            (unwrapped.num_envs, 1 + len(unwrapped.cfg.rcs_thruster_layout)), device=unwrapped.device
+        )
         hover_throttle = (
             unwrapped.cfg.rocket_mass_kg
             * abs(float(unwrapped.cfg.sim.gravity[2]))
@@ -152,14 +154,14 @@ def main() -> None:
                     world_up_z = 1.0 - 2.0 * (x * x + y * y)
                     orientation = "RIGHT-SIDE-UP" if world_up_z > 0 else "UPSIDE-DOWN"
                     throttle_pct = 100.0 * float(preview_action[0, 0].clamp(-1.0, 1.0) * 0.5 + 0.5)
-                    yaw_gimbal_deg = float(unwrapped._rocket.data.joint_pos[0, unwrapped._yaw_joint_ids[0]]) * 57.29578
-                    pitch_gimbal_deg = float(unwrapped._rocket.data.joint_pos[0, unwrapped._pitch_joint_ids[0]]) * 57.29578
+                    rcs_duty = torch.clamp(preview_action[0, 1:], 0.0, 1.0)
+                    rcs_str = " ".join(f"{i}:{float(d):.2f}" for i, d in enumerate(rcs_duty))
                     print(
                         f"[LunarRocket] step {step}/{steps} FPS={max(step, 1) / elapsed:.1f} "
                         f"pos=({float(pos[0]):.2f},{float(pos[1]):.2f},{float(pos[2]):.2f}) vz={vel_z:.3f} "
                         f"quat(x,y,z,w)=({x:.3f},{y:.3f},{z:.3f},{w:.3f}) [{orientation}, world_up_z={world_up_z:.3f}] "
                         f"raw_throttle_cmd={float(preview_action[0, 0]):.3f} (~{throttle_pct:.0f}% of commandable range) "
-                        f"gimbal_yaw={yaw_gimbal_deg:.1f}deg gimbal_pitch={pitch_gimbal_deg:.1f}deg",
+                        f"rcs_duty=[{rcs_str}]",
                         flush=True,
                     )
                 sleep_time = dt - (time.time() - start_time)
