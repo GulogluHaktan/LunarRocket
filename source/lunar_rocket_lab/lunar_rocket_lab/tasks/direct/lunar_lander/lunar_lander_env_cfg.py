@@ -87,6 +87,20 @@ class LunarLanderEnvCfg(DirectRLEnvCfg):
                 max_linear_velocity=100.0,
                 max_angular_velocity=100.0,
                 enable_gyroscopic_forces=True,
+                # Deliberate training-stabilization aid, NOT physical realism
+                # (a real RCS-controlled spacecraft has no ambient angular
+                # drag): under TVC, the gimbal joints' own damping=0.1
+                # (hopper_lunar.xml) gave the body's attitude dynamics
+                # implicit rate damping for free. RCS applies raw torque
+                # impulses directly to an otherwise-undamped rigid body --
+                # a pure double integrator (torque -> angular accel ->
+                # angular velocity that never decays on its own) -- which is
+                # a much harder control problem for the same policy/training
+                # budget than TVC's effectively-position-controlled nozzle
+                # was. angular_damping=1.0 gives the attitude DOF SOME decay
+                # (roughly a 1s time constant) so random exploration torque
+                # doesn't accumulate into unbounded spin between corrections.
+                angular_damping=1.0,
             ),
             collision_props=sim_utils.CollisionPropertiesCfg(),
             # Required for the foot-load ContactSensor: without it PhysX never
@@ -144,14 +158,49 @@ class LunarLanderEnvCfg(DirectRLEnvCfg):
     # RCS authority curriculum (fresh design, replaces the gimbal-angle ramp
     # above 1:1 in SHAPE only -- same floor-to-ceiling-by-difficulty pattern,
     # now scaling max per-thruster RCS force instead of gimbal angle).
-    # UNTRAINED PLACEHOLDER VALUES: nothing below this comment has been
-    # validated against a real GPU training run -- they are starting points
-    # only, expect to retune all of them (same iterative process documented
-    # throughout this file for the reward weights) once RCS telemetry from an
-    # actual run exists.
-    max_rcs_thrust_n = 1.2
-    policy_min_rcs_thrust_n = 0.3
-    policy_max_rcs_thrust_n = 1.2
+    #
+    # max_rcs_thrust_n IS mathematically derived (not guessed), from the
+    # vehicle's actual moment of inertia and a target correction time --
+    # unlike the first attempt at this constant (1.2 N), which was picked
+    # with no such derivation and turned out ~110x too strong (see below).
+    # Derivation (bang-bang null of a soft_tilt_deg disturbance):
+    #   Ixx = Iyy = 0.025 kg*m^2 (hopper_lunar.xml diaginertia)
+    #   theta = soft_tilt_deg = 15deg = 0.2618 rad
+    #   settle_time_s = 2.0s (budget to null that disturbance, leaving most
+    #     of episode_length_s=28s for the rest of the approach/landing)
+    #   bang-bang: theta = a * (settle_time_s/2)^2
+    #     => a = 0.2618 / 1.0^2 = 0.2618 rad/s^2 (15 deg/s^2)
+    #   required combined torque about one axis: tau = Ixx * a = 0.00654 Nm
+    #   one axis-aligned thruster's torque = z_offset(0.40m) * force (the
+    #     radial component cancels for an axis-aligned thruster -- see
+    #     rcs_thruster_layout); assume the policy typically combines it with
+    #     partial help from a neighboring diagonal thruster, i.e. an
+    #     effective_multiplier of ~1.5x a single thruster's torque:
+    #     max_rcs_thrust_n = tau / effective_multiplier / z_offset
+    #                       = 0.00654 / 1.5 / 0.40 ~= 0.0109 N
+    # This replaces the earlier back-of-envelope check done directly against
+    # the reward file's history (see the archived TVC section above): that
+    # check found a SINGLE thruster at the old 1.2 N gave ~1100 deg/s^2 of
+    # angular accel, and all 8 firing together (plausible under an
+    # untrained policy's independent per-thruster exploration noise, unlike
+    # TVC's single continuous 2-axis command) could hit ~2650 deg/s^2 --
+    # two to three orders of magnitude past anything ever validated stable
+    # under TVC (whose OWN floor authority increase from 4->6deg, ~1.5x, was
+    # enough to collapse success_rate from ~22-27% to <1.5%). Confirmed via
+    # a real GPU run (2026-09-21/22) that the old 1.2 N value produced the
+    # same complete-collapse signature (ent_coef -> ~0, success_rate 0% for
+    # the entire run) independent of the target_entropy SAC hyperparameter,
+    # consistent with this being an actuator-authority problem, not a SAC
+    # tuning problem.
+    #
+    # STILL A STARTING POINT, not a validated final value: the
+    # effective_multiplier/settle_time_s assumptions above are reasonable
+    # but unverified guesses, same as every other constant in this file --
+    # rerun and check `train/ent_coef` and `Metrics/success_rate` before
+    # trusting a long run again.
+    max_rcs_thrust_n = 0.011
+    policy_min_rcs_thrust_n = 0.00275
+    policy_max_rcs_thrust_n = 0.011
     curriculum_full_rcs_difficulty = 1.0
     # Not physically derived (see the plan this was implemented from): RCS
     # thrusters produce torque, not direct lateral thrust, so lateral motion
