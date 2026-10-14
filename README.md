@@ -1,99 +1,101 @@
+🇬🇧 English · 🇹🇷 [Türkçe](README.tr.md)
+
 # LunarRocket
 
-**Isaac Lab'da, 4 bacaklı bir hopper roketin gerçek kraterli/eğimli Ay arazisine rastgele hedefe indirilmesini SAC ile öğrenen görev.**
+**An Isaac Lab task in which a SAC policy learns to land a 4-legged hopper rocket on real cratered/sloped lunar terrain at a randomized target.**
 
-Eğitim yolu `LunarRocket-Lander-Direct-v0` (`source/lunar_rocket_lab`); sabit ana motor (gaz) + tüm yönelim kontrolü için 8'li RCS iticisi halkası (eski TVC/gimbal tasarımının yerini aldı), rastgele hedef, gerçek Ay arazisi.
+The training path is `LunarRocket-Lander-Direct-v0` (`source/lunar_rocket_lab`); a fixed main engine (throttle) plus a ring of 8 RCS thrusters for all attitude control (replacing the earlier TVC/gimbal design), randomized target, real lunar terrain.
 
-![Simülasyon sahnesi](experiments/terrain_transition/paper/sim_scene_view.png)
-*Isaac Lab içinde hopper roket ve Ay arazisi (terrain-transition deneyi).*
+![Simulation scene](experiments/terrain_transition/paper/sim_scene_view.png)
+*Hopper rocket and lunar terrain inside Isaac Lab (terrain-transition experiment).*
 
-## Özet
+## Summary
 
 | | |
 |---|---|
-| **Problem** | Eğimli/kraterli Ay arazisine hassas, güvenli iniş ve arazi geçiş (terrain blend) kalitesi |
-| **Yöntem** | SAC (Soft Actor-Critic); iki katmanlı arazi karışımı (terrain blend) ve ablasyon çalışmaları |
-| **Simülasyon / donanım** | NVIDIA Isaac Lab (direct workflow), Docker, GPU |
-| **Makale** | `experiments/terrain_transition/paper/` (kaynak ve `out/full_paper_en.pdf`) |
+| **Problem** | Precise, safe landing on sloped/cratered lunar terrain and terrain-blend quality |
+| **Method** | SAC (Soft Actor-Critic); two-tier terrain blending and ablation studies |
+| **Simulation / hardware** | NVIDIA Isaac Lab (direct workflow), Docker, GPU |
+| **Paper** | `experiments/terrain_transition/paper/` (source and `out/full_paper_en.pdf`) |
 
-### Sistem mimarisi
+### System architecture
 
-![Metodoloji akışı](experiments/terrain_transition/paper/methodology_flow.png)
+![Methodology flow](experiments/terrain_transition/paper/methodology_flow.png)
 
-### Akış şeması (nasıl çalışır)
+### Flow diagram (how it works)
 
 ```mermaid
 flowchart TD
-  POOL["Terrain havuzu - CPU arka plan thread"] --> RST["Reset: hazır arazi slotu GPU'ya kopyalanır"]
+  POOL["Terrain pool - CPU background thread"] --> RST["Reset: ready terrain slot copied to GPU"]
   RST --> ENV["LunarRocket-Lander-Direct-v0 - Isaac Lab"]
-  ENV --> POL["SAC politikası"]
-  POL --> ACT["Ana motor gazı + 8 RCS iticisi"]
+  ENV --> POL["SAC policy"]
+  POL --> ACT["Main engine throttle + 8 RCS thrusters"]
   ACT --> ENV
-  ENV --> RW["Ödül: yoğun terimler + iniş sınıflandırması"]
-  RW --> CUR["Curriculum: başarı oranına göre zorluk artar"]
+  ENV --> RW["Reward: dense terms + landing classification"]
+  RW --> CUR["Curriculum: difficulty rises with success rate"]
   CUR --> RST
 ```
 
-Arazi havuzu eğitimden bağımsız üretilir; her reset hazır bir slotu alır, politika gaz ve RCS komutlarını üretir, başarı oranı arttıkça mesafe/yanal hız zorluğu yükselir.
+The terrain pool is generated independently of training; every reset takes a ready slot, the policy outputs throttle and RCS commands, and as the success rate grows the distance/lateral-speed difficulty increases.
 
-## Seçilmiş sonuçlar
+## Selected results
 
-### Sonuç 1: Arazi karışımı yarıçap taraması
-Karışım yarıçapının iniş başarısına etkisi (`results/ablations/radius_sweep.csv` ham veri).
+### Result 1: terrain-blend radius sweep
+Effect of the blend radius on landing success (raw data: `results/ablations/radius_sweep.csv`).
 
 ![radius sweep](experiments/terrain_transition/results/ablations/radius_sweep.png)
 
-### Sonuç 2: Karışım çözünürlüğü ve geçiş genişliği
+### Result 2: blend resolution and transition width
 <p>
 <img src="experiments/terrain_transition/results/ablations/resolution_sweep.png" width="49%">
 <img src="experiments/terrain_transition/results/ablations/switch_width_sweep.png" width="49%">
 </p>
 
-### Sonuç 3: Rc taraması
+### Result 3: Rc sweep
 ![rc sweep](experiments/terrain_transition/results/ablations/rc_sweep.png)
 
-*Tüm şekiller `experiments/terrain_transition/results/` altında; istatistik testleri `significance_tests.md`.*
+*All figures are under `experiments/terrain_transition/results/`; statistical tests in `significance_tests.md`.*
 
-## Kurulum
+## Installation
 
-### Gereksinimler
-- Linux, NVIDIA GPU + sürücü, Docker, Isaac Lab (ayrıntı: [docs/README_ayrintili.md](docs/README_ayrintili.md))
+### Requirements
+- Linux, NVIDIA GPU + driver, Docker, Isaac Lab (details: [docs/README_ayrintili.md](docs/README_ayrintili.md))
 
-### Adımlar
+### Steps
 ```bash
 git clone https://github.com/GulogluHaktan/LunarRocket.git
 cd LunarRocket
-# kurulum betiği ve adımlar docs/README_ayrintili.md bölüm 2'de
+# installer script and steps are in docs/README_ayrintili.md, section 2
 ```
 
-## Kullanım
+## Usage
 
 ```bash
-./scripts/train_isaaclab_native.sh        # eğitim
-./scripts/watch_isaaclab_native.sh        # izleme
+./scripts/train_isaaclab_native.sh        # training
+./scripts/watch_isaaclab_native.sh        # watch
 ```
-Hızlı duman testi: `ISAACLAB_MAX_ITERATIONS=1 ISAACLAB_NUM_ENVS=16 ./scripts/train_isaaclab_native.sh`
+Quick smoke test: `ISAACLAB_MAX_ITERATIONS=1 ISAACLAB_NUM_ENVS=16 ./scripts/train_isaaclab_native.sh`
 
-## Sonuçları yeniden üret
+## Reproducing the results
 
-| Şekil | Komut |
+| Figure | Command |
 |---|---|
-| `results/ablations/*.png` | `python experiments/terrain_transition/run_experiment.py` ve `analyze_training_comparison.py` (parametreler için kaynak koda bak) |
+| `results/ablations/*.png` | `python experiments/terrain_transition/run_experiment.py` and `analyze_training_comparison.py` (see source for parameters) |
 
-## Proje yapısı
+## Project structure
 
 ```
 LunarRocket/
-├── source/lunar_rocket_lab/   # Isaac Lab görev paketi
-├── experiments/terrain_transition/  # deney, sonuçlar, makale
-├── scripts/                   # eğitim/izleme betikleri
-├── configs/  docker/  app/    # ayarlar, imaj, uygulama
-├── assets/                    # sahne ve doku varlıkları
-├── docs/                      # ayrıntılı README ve notlar
+├── source/lunar_rocket_lab/   # Isaac Lab task package
+├── experiments/terrain_transition/  # experiment, results, paper
+├── scripts/                   # training/watch scripts
+├── configs/  docker/  app/    # configs, image, application
+├── assets/                    # scene and texture assets
+├── docs/                      # detailed README and notes
 └── tests/
 ```
 
-## Atıf, lisans, iletişim
+## Citation, license, contact
 
 ```bibtex
 @misc{lunarrocket2026,
@@ -103,4 +105,4 @@ LunarRocket/
   url    = {https://github.com/GulogluHaktan/LunarRocket}
 }
 ```
-Lisans: TODO. İletişim: Haktan Güloğlu.
+License: TODO. Contact: Haktan Güloğlu.
