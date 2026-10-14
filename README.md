@@ -20,6 +20,22 @@ Eğitim yolu `LunarRocket-Lander-Direct-v0` (`source/lunar_rocket_lab`); sabit a
 
 ![Metodoloji akışı](experiments/terrain_transition/paper/methodology_flow.png)
 
+### Akış şeması (nasıl çalışır)
+
+```mermaid
+flowchart TD
+  POOL["Terrain havuzu - CPU arka plan thread"] --> RST["Reset: hazır arazi slotu GPU'ya kopyalanır"]
+  RST --> ENV["LunarRocket-Lander-Direct-v0 - Isaac Lab"]
+  ENV --> POL["SAC politikası"]
+  POL --> ACT["Ana motor gazı + 8 RCS iticisi"]
+  ACT --> ENV
+  ENV --> RW["Ödül: yoğun terimler + iniş sınıflandırması"]
+  RW --> CUR["Curriculum: başarı oranına göre zorluk artar"]
+  CUR --> RST
+```
+
+Arazi havuzu eğitimden bağımsız üretilir; her reset hazır bir slotu alır, politika gaz ve RCS komutlarını üretir, başarı oranı arttıkça mesafe/yanal hız zorluğu yükselir.
+
 ## Seçilmiş sonuçlar
 
 ### Sonuç 1: Arazi karışımı yarıçap taraması
