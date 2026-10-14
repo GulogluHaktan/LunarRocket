@@ -251,9 +251,12 @@ def main() -> None:
             ax.set_title(tag, fontsize=15)
             ax.set_xlabel("env steps", fontsize=13)
             ax.tick_params(labelsize=11)
-            ax.legend(fontsize=12)
+        # one shared legend above the panels: per-axis legends sat on top of the curves
+        handles, labels = axes[0].get_legend_handles_labels()
+        fig.legend(handles, labels, loc="upper center", ncol=len(labels),
+                   fontsize=12, bbox_to_anchor=(0.5, 0.93), frameon=False)
         fig.suptitle(suptitle, fontsize=15)
-        fig.tight_layout()
+        fig.tight_layout(rect=(0, 0, 1, 0.88))
         fig.savefig(OUT / filename, dpi=200)
         plt.close(fig)
 

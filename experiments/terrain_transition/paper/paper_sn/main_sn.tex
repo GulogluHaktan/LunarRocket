@@ -1,0 +1,92 @@
+%% ===========================================================================
+%%  Terrain Fine-Detail Transition in Lunar Landing Simulations
+%%  SPRINGER NATURE build for *Autonomous Intelligent Systems*.
+%%
+%%  sn-jnl.cls is NOT on CTAN -- it ships only with Springer Nature's own
+%%  LaTeX bundle.  To build this file: open Overleaf -> New Project ->
+%%  Templates -> "Springer Nature LaTeX Template", then drop this folder in
+%%  (or upload the folder as a zip and set main_sn.tex as the main document).
+%%  Locally, main.tex gives the same content in a neutral class.
+%%
+%%  body.tex / backmatter.tex / sections/ / tables/ are shared with main.tex
+%%  and need no edits when switching between the two.
+%% ===========================================================================
+\documentclass[pdflatex,sn-mathphys-num]{sn-jnl}
+
+%% Only what the manuscript actually uses.  The Springer skeleton's
+%% algorithm/theorem boilerplate is dropped: this paper declares no algorithm
+%% and no theorem environment, and \theoremstyle{thmstyleone} is undefined
+%% under the sn-mathphys-num option.
+\usepackage{graphicx}
+\graphicspath{{figures/}}
+\usepackage{amsmath,amssymb}
+\usepackage{booktabs}
+\usepackage{siunitx}
+\usepackage{tikz}
+\usetikzlibrary{decorations.pathmorphing}
+
+\raggedbottom
+
+%% Float placement: keep floats on text pages instead of letting LaTeX open
+%% dedicated figure/table pages (the placement specs also drop the `p' option).
+\renewcommand{\topfraction}{0.9}
+\renewcommand{\bottomfraction}{0.8}
+\renewcommand{\textfraction}{0.08}
+\renewcommand{\floatpagefraction}{0.8}
+\setcounter{topnumber}{3}
+\setcounter{bottomnumber}{2}
+\setcounter{totalnumber}{5}
+
+\begin{document}
+
+\title[Terrain Fine-Detail Transition in Lunar Landing Simulations]{Terrain
+Fine-Detail Transition in Lunar Landing Simulations: A Comparison of
+Smoothstep, Gaussian, and Hybrid Blending Methods in Isaac Lab}
+
+%% ---------------------------------------------------------------------------
+%% Author list and order are final.  Still to fill before submission:
+%%   - an institutional e-mail for each of the four authors
+%%   - \orcid{} for \"Ozkurt, Tun\c{c} and Onay (G\"ulo\u{g}lu's is on record;
+%%     sn-jnl v0.1 comments \orcid out, so Springer collects them in
+%%     Editorial Manager at submission)
+%% ---------------------------------------------------------------------------
+%% Author order matches the HydroGym manuscript.
+%% \author* marks the corresponding author: Cem "Ozkurt (1st).
+\author*[1]{\fnm{Cem} \sur{\"Ozkurt}}
+  \email{TODO@institutional.address}
+%%  \orcid{0000-0000-0000-0000}   %% TODO
+
+\author[1]{\fnm{Ey\"up Altu\u{g}} \sur{Tun\c{c}}}
+  \email{TODO@institutional.address}
+%%  \orcid{0000-0000-0000-0000}   %% TODO
+
+\author[1]{\fnm{Muhammed Emin} \sur{Onay}}
+  \email{TODO@institutional.address}
+%%  \orcid{0000-0000-0000-0000}   %% TODO
+
+\author[1]{\fnm{Haktan Yusuf} \sur{G\"ulo\u{g}lu}}
+  \email{TODO@institutional.address}
+%% ORCID 0009-0007-9429-6154 -- sn-jnl v0.1 comments \orcid out, so it is not
+%% set here; Springer collects and verifies ORCIDs in Editorial Manager at
+%% submission, and that is the copy that gets published.
+
+\affil[1]{\orgdiv{National Technology Workshop, Artificial Intelligence
+Center}, \orgname{Sakarya University}, \orgaddress{\city{Sakarya},
+\country{T\"urkiye}}}
+
+\abstract{\input{abstract}}
+
+\keywords{lunar landing simulation, reinforcement learning, Isaac Lab,
+procedural terrain generation, multi-resolution blending, continuity analysis}
+
+\maketitle
+
+\input{body}
+
+\backmatter
+
+\input{backmatter}
+
+\bibliography{refs}
+
+\end{document}

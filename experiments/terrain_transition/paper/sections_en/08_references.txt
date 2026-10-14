@@ -1,6 +1,14 @@
+Agarwal, R., Schwarzer, M., Castro, P. S., Courville, A. C., & Bellemare, M. G. (2021). Deep reinforcement learning at the edge of the statistical precipice. Advances in Neural Information Processing Systems (NeurIPS), 34. https://doi.org/10.48550/arXiv.2108.13264
+
 Barker, M. K., Mazarico, E., Neumann, G. A., Zuber, M. T., Haruyama, J., & Smith, D. E. (2016). A new lunar digital elevation model from the Lunar Orbiter Laser Altimeter and SELENE Terrain Camera. Icarus, 273, 346-355. https://doi.org/10.1016/j.icarus.2015.07.039
 
 de Boer, W. H. (2000). Fast terrain rendering using geometrical mipmapping (E-mersion Project technical report). https://www.flipcode.com/archives/article_geomipmaps.pdf
+
+Colas, C., Sigaud, O., & Oudeyer, P.-Y. (2018). How many random seeds? Statistical power analysis in deep reinforcement learning experiments. arXiv:1806.08295. https://doi.org/10.48550/arXiv.1806.08295
+
+Colas, C., Sigaud, O., & Oudeyer, P.-Y. (2019). A hitchhiker's guide to statistical comparisons of reinforcement learning algorithms. arXiv:1904.06979. https://doi.org/10.48550/arXiv.1904.06979
+
+Collins, J., Chand, S., Vanderkop, A., & Howard, D. (2021). A review of physics simulators for robotic applications. IEEE Access, 9, 51416-51431. https://doi.org/10.1109/ACCESS.2021.3068769
 
 Duchaineau, M., Wolinsky, M., Sigeti, D. E., Miller, M. C., Aldrich, C., & Mineev-Weinstein, M. B. (1997). ROAMing terrain: Real-time optimally adapting meshes. Proceedings of the 8th IEEE Conference on Visualization (VIS '97), 81-88. https://ieeexplore.ieee.org/document/663860/
 
@@ -14,11 +22,17 @@ Henderson, P., Islam, R., Bachman, P., Pineau, J., Precup, D., & Meger, D. (2018
 
 Ishida, T., Fukuda, S., Kariya, K., Kamata, H., Takadama, K., Kojima, H., Sawai, S., & Sakai, S. (2025). Vision-based navigation and obstacle detection flight results in SLIM lunar landing. Acta Astronautica, 226, 772-781. https://doi.org/10.1016/j.actaastro.2024.11.002
 
+Jain, A., Sharma, A. K., & Rajan, K. S. (2024). Learning based infinite terrain generation with level of detailing. 2024 International Conference on 3D Vision (3DV), 1048-1058. https://doi.org/10.1109/3DV62453.2024.00077
+
 Johnson, A. E., & Montgomery, J. F. (2008). Overview of terrain relative navigation approaches for precise lunar landing. 2008 IEEE Aerospace Conference, 1-10. https://doi.org/10.1109/AERO.2008.4526302
 
 Losasso, F., & Hoppe, H. (2004). Geometry clipmaps: Terrain rendering using nested regular grids. ACM Transactions on Graphics, 23(3), 769-776. https://doi.org/10.1145/1015706.1015799
 
 Mittal, M., Yu, C., Yu, Q., Liu, J., Rudin, N., Hoeller, D., Yuan, J. L., Singh, R., Guo, Y., Mazhar, H., Mandlekar, A., Babich, B., State, G., Hutter, M., & Garg, A. (2023). Orbit: A unified simulation framework for interactive robot learning environments. IEEE Robotics and Automation Letters, 8(6), 3740-3747. https://doi.org/10.1109/LRA.2023.3270034
+
+Muratore, F., Ramos, F., Turk, G., Yu, W., Gienger, M., & Peters, J. (2022). Robot learning from randomized simulations: A review. Frontiers in Robotics and AI, 9, 799893. https://doi.org/10.3389/frobt.2022.799893
+
+Nakashima, H., Fujii, H., Oida, A., Momozu, M., Kanamori, H., Aoki, S., Yokoyama, T., Shimizu, H., Miyasaka, J., & Ohdoi, K. (2010). Discrete element method analysis of single wheel performance for a small lunar rover on sloped terrain. Journal of Terramechanics, 47(5), 307-321. https://doi.org/10.1016/j.jterra.2010.04.001
 
 NASA Jet Propulsion Laboratory. (n.d.). ALHAT: Autonomous Landing and Hazard Avoidance Technology. JPL Robotics. https://www-robotics.jpl.nasa.gov/what-we-do/research-tasks/alhat-autonomous-landing-and-hazard-avoidance-technology/
 
@@ -26,10 +40,20 @@ NVIDIA. (2025). Isaac Lab: A GPU-accelerated simulation framework for multi-moda
 
 Ohtake, Y., Belyaev, A., & Seidel, H.-P. (2003). A multi-scale approach to 3D scattered data interpolation with compactly supported basis functions. Proceedings of the 2003 Shape Modeling International (SMI '03), 153-161. https://ieeexplore.ieee.org/document/1199611/
 
+Ohtake, Y., Belyaev, A., Alexa, M., Turk, G., & Seidel, H.-P. (2003). Multi-level partition of unity implicits. ACM Transactions on Graphics, 22(3), 463-470. https://doi.org/10.1145/882262.882293
+
+Pajarola, R., & Gobbetti, E. (2007). Survey of semi-regular multiresolution models for interactive terrain rendering. The Visual Computer, 23(8), 583-605. https://doi.org/10.1007/s00371-007-0163-2
+
 Raffin, A., Hill, A., Gleave, A., Kanervisto, A., Ernestus, M., & Dormann, N. (2021). Stable-Baselines3: Reliable reinforcement learning implementations. Journal of Machine Learning Research, 22(268), 1-8. http://jmlr.org/papers/v22/20-1364.html
 
+Richard, A., Kamohara, J., Uno, K., Santra, S., van der Meer, D., Olivares-Mendez, M., & Yoshida, K. (2024). OmniLRS: A photorealistic simulator for lunar robotics. 2024 IEEE International Conference on Robotics and Automation (ICRA), 16901-16907. https://doi.org/10.1109/ICRA57147.2024.10610026
+
 Rudin, N., Hoeller, D., Reist, P., & Hutter, M. (2022). Learning to walk in minutes using massively parallel deep reinforcement learning. Proceedings of the 5th Conference on Robot Learning (CoRL 2022), PMLR 164, 91-100. https://proceedings.mlr.press/v164/rudin22a.html
+
+Scorsoglio, A., D'Ambrosio, A., Ghilardi, L., Gaudet, B., Curti, F., & Furfaro, R. (2021). Image-based deep reinforcement meta-learning for autonomous lunar landing. Journal of Spacecraft and Rockets, 59(1), 153-165. https://doi.org/10.2514/1.A35072
 
 Tobin, J., Fong, R., Ray, A., Schneider, J., Zaremba, W., & Abbeel, P. (2017). Domain randomization for transferring deep neural networks from simulation to the real world. 2017 IEEE/RSJ International Conference on Intelligent Robots and Systems (IROS), 23-30. https://doi.org/10.1109/IROS.2017.8202133
 
 Wendland, H. (1995). Piecewise polynomial, positive definite and compactly supported radial basis functions of minimal degree. Advances in Computational Mathematics, 4(1), 389-396. https://doi.org/10.1007/BF02123482
+
+Zhang, L., She, J., Tan, J., Wang, B., & Sun, Y. (2019). A multilevel terrain rendering method based on dynamic stitching strips. ISPRS International Journal of Geo-Information, 8(6), 255. https://doi.org/10.3390/ijgi8060255

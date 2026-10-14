@@ -217,7 +217,9 @@ def make_plots(all_rows: list[dict], out_dir: Path) -> None:
     axes[3].set_xticklabels(ALL_METHODS, rotation=20, fontsize=10)
     axes[3].tick_params(axis="y", labelsize=10)
     axes[3].set_title("mesh VRAM proxy (MB)", fontsize=13)
-    axes[3].legend(fontsize=10)
+    # headroom so the legend sits above the bars instead of covering them
+    axes[3].set_ylim(0, max(mem_two) * 1.28)
+    axes[3].legend(fontsize=10, loc="upper center", ncol=2)
 
     fig.tight_layout()
     fig.savefig(out_dir / "cost_comparison.png", dpi=200)

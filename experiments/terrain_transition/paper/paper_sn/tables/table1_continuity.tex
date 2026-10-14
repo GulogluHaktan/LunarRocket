@@ -1,0 +1,17 @@
+\begin{table}[htb]
+\centering
+\caption{Boundary continuity ratios relative to smoothstep, aggregated over thirty seeds, isolating only the fine-detail component. C0 is the RMS boundary height error and C1 the RMS slope error; both columns are ratios to the smoothstep reference. p is the Wilcoxon signed-rank p value.}
+\label{tab:continuity}
+\footnotesize
+\setlength{\tabcolsep}{4pt}
+\begin{tabular}{@{}lrrrr@{}}
+\toprule
+Method & C0 ratio & C1 ratio & Wilcoxon p & n \\
+\midrule
+\texttt{smoothstep} (reference) & 1.0 & 1.0 & - & 30 \\
+\texttt{gaussian\_shipped} (k=1.0) & 3192x & 535x & 1.86e-09 & 30 \\
+\texttt{gaussian\_calibrated} (k=ln(1000)) & 9.3x & 1.6x & 1.86e-09 & 30 \\
+\texttt{hybrid} & 1.0 (identical) & 1.0 (identical) & n/a (analytically identical) & 30 \\
+\bottomrule
+\end{tabular}
+\end{table}

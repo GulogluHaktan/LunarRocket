@@ -1,0 +1,64 @@
+%% Hand-authored (carries the maths); build_tex.py deliberately skips this file.
+The fine-detail height of the local patch is added to the global surface with
+one of three candidate fade functions. In all three functions, with $r$ the
+distance from the centre and $R = \texttt{terrain\_detail\_radius\_m} =
+\SI{8.0}{\metre}$ the fixed transition radius, the value is forced exactly to
+zero for $r \ge R$ (hard truncation); this is the key methodological
+arrangement that makes the three methods comparable under the same transition
+budget, and it is applied this way in the production code as well.
+Figure~\ref{fig:geometry} sketches the two-layer geometry and the three fade
+profiles defined below.
+
+\paragraph{Smoothstep (compact support, default/current method).}
+With $t = \operatorname{clamp}(1 - r/R,\, 0,\, 1)$,
+\begin{equation}
+  \mathrm{fade}_{\mathrm{ss}}(r) = t^{2}\,(3 - 2t).
+  \label{eq:smoothstep}
+\end{equation}
+This function is already exactly zero at $r = R$; it needs no additional
+truncation step, and $C^{1}$ continuity is analytically guaranteed.
+
+\paragraph{Gaussian (infinite support, previously used method).}
+\begin{equation}
+  \mathrm{fade}_{\mathrm{g}}(r) = \exp\!\left(-k \left(\frac{r}{R}\right)^{2}\right).
+  \label{eq:gaussian}
+\end{equation}
+Two values of $k$ are evaluated separately in this study: the previously used
+(as-shipped) constant $k = 1.0$, and the calibrated constant proposed in this
+study, $k = \ln(1000) \approx 6.9078$, which brings the Gaussian's practical
+support down to roughly one part in a thousand at $R$. The
+\texttt{cfg.terrain\_gaussian\_k} field in the production code uses the
+calibrated constant by default; the as-shipped $k = 1.0$ was tested only in
+this study's analytic/CPU comparison, as a separate variant
+(\texttt{gaussian\_shipped}), to demonstrate the existing defect. For both $k$
+values, the function is forced to zero externally at $r \ge R$.
+
+\paragraph{Hybrid (proposed method).}
+With the landing-gear contact-footprint radius $r_{c} =
+\texttt{terrain\_hybrid\_contact\_radius\_m} = \SI{1.5}{\metre}$ and the switch
+width $w = \texttt{terrain\_hybrid\_switch\_width\_m} = \SI{0.3}{\metre}$, a
+smoothstep-weighted switch is defined over the interval $[\,r_{c} - w/2,\;
+r_{c} + w/2\,]$. Writing $\mathrm{lo} = r_{c} - w/2$ and $\mathrm{hi} = r_{c} +
+w/2$, and $u = \operatorname{clamp}\!\big((\mathrm{hi} - r)/(\mathrm{hi} -
+\mathrm{lo}),\, 0,\, 1\big)$,
+\begin{equation}
+  \mathrm{switch}(r) = u^{2}\,(3 - 2u).
+  \label{eq:switch}
+\end{equation}
+The final fade is then
+\begin{equation}
+  \mathrm{fade}_{\mathrm{hyb}}(r)
+    = \mathrm{switch}(r)\,\mathrm{fade}_{\mathrm{g}}(r)
+    + \big(1 - \mathrm{switch}(r)\big)\,\mathrm{fade}_{\mathrm{ss}}(r);
+  \label{eq:hybrid}
+\end{equation}
+that is, the region near the foot contact zone is weighted mostly toward the
+Gaussian, beyond it mostly toward smoothstep, and the transition between the
+two functions is smoothed by a smoothstep weight that is itself $C^{1}$-smooth.
+Since $\mathrm{switch}(r) = 0$ at the $r = R$ boundary, the hybrid method is
+analytically identical to smoothstep at that boundary.
+
+These three methods are integrated into the production code, selectable via the
+\texttt{ISAACLAB\_TERRAIN\_BLEND\_METHOD} environment variable
+(\texttt{smoothstep} \textbar{} \texttt{gaussian} \textbar{} \texttt{hybrid}),
+without changing the existing default behaviour (\texttt{smoothstep}).

@@ -143,12 +143,12 @@ def main():
     add_title_block(
         doc,
         title=title,
-        authors="Haktan Yusuf Guloglu",
+        authors="Cem Ozkurt, Eyup Altug Tunc, Muhammed Emin Onay, Haktan Yusuf Guloglu",
         affiliations=["Sakarya University, National Technology Workshop, Artificial Intelligence Center"],
         abstract_path=ROOT / "abstract_en.txt",
         keywords=["Lunar landing simulation", "Reinforcement learning", "Isaac Lab",
                   "Procedural terrain generation", "Multi-resolution blending",
-                  "Continuity analysis", "Soft Actor-Critic"],
+                  "Continuity analysis"],
     )
 
     add_section(doc, "Abstract (Turkish)", "Heading 1", "Normal", SEC / "01_abstract_tr.txt")
@@ -241,16 +241,22 @@ def main():
     add_section(doc, "5. Discussion", "Heading 1", "Normal", SEC / "06_discussion.txt")
     add_section(doc, "6. Conclusion", "Heading 1", "Normal", SEC / "07_conclusion.txt")
 
+    # Springer Nature requires each of these as its own declaration, in this
+    # order, before the reference list (mirrors paper_sn/backmatter.tex).
     add_section(doc, "Acknowledgements", "Heading 1", "Normal", SEC / "09_acknowledgements.txt")
-    add_section(doc, "Author Contributions (CRediT)", "Heading 1", "Normal", SEC / "10_author_contributions.txt")
-    add_section(doc, "Conflict of Interest Statement", "Heading 1", "Normal", SEC / "11_conflict_of_interest.txt")
-    add_section(doc, "Data and Code Availability", "Heading 1", "Normal", SEC / "12_data_availability.txt")
+    add_section(doc, "Funding", "Heading 1", "Normal", SEC / "14_funding.txt")
+    add_section(doc, "Competing interests", "Heading 1", "Normal", SEC / "11_conflict_of_interest.txt")
+    add_section(doc, "Ethics approval and consent to participate", "Heading 1", "Normal", SEC / "15_ethics.txt")
+    add_section(doc, "Consent for publication", "Heading 1", "Normal", SEC / "16_consent.txt")
+    add_section(doc, "Data availability", "Heading 1", "Normal", SEC / "12_data_availability.txt")
+    add_section(doc, "Code availability", "Heading 1", "Normal", SEC / "13_code_availability.txt")
+    add_section(doc, "Author contributions", "Heading 1", "Normal", SEC / "10_author_contributions.txt")
 
     add_references(doc, SEC / "08_references.txt")
 
     cp = doc.core_properties
     cp.title = title
-    cp.author = "Haktan Yusuf Guloglu"
+    cp.author = "Cem Ozkurt, Eyup Altug Tunc, Muhammed Emin Onay, Haktan Yusuf Guloglu"
     cp.subject = ("Comparison of terrain blend methods in an Isaac Lab-based "
                   "lunar landing simulation")
     cp.language = "en-US"

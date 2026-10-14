@@ -38,3 +38,7 @@ assets/rocket/*/
 assets/moon_texture/
 assets/rocks/
 recovered/
+
+# large archives
+LunarRocket.zip
+*.zip

@@ -1,0 +1,72 @@
+%% ===========================================================================
+%%  Terrain Fine-Detail Transition in Lunar Landing Simulations
+%%  NEUTRAL build -- compiles anywhere, used to proofread and to count pages.
+%%  The journal build is main_sn.tex (Springer Nature sn-jnl); body.tex,
+%%  backmatter.tex, sections/ and tables/ are shared verbatim between the two.
+%% ===========================================================================
+\documentclass[11pt,a4paper]{article}
+
+\usepackage[T1]{fontenc}
+\usepackage[utf8]{inputenc}
+\usepackage[margin=2.4cm]{geometry}
+\usepackage{amsmath,amssymb}
+\usepackage{graphicx}
+\graphicspath{{figures/}}
+\usepackage{booktabs}
+\usepackage{siunitx}
+\usepackage{tikz}
+\usetikzlibrary{decorations.pathmorphing}
+\usepackage{caption}
+\usepackage{microtype}
+\usepackage[numbers,sort&compress]{natbib}
+\usepackage[hidelinks]{hyperref}
+\usepackage{cleveref}
+
+%% sn-jnl supplies \bmhead; the neutral class needs a stand-in so that
+%% backmatter.tex compiles unchanged in both builds.
+\providecommand{\bmhead}[1]{\subsection*{#1}}
+
+\captionsetup{font=small,labelfont=bf}
+\setlength{\parskip}{0.4em}
+
+%% Float placement: keep floats on text pages instead of letting LaTeX open
+%% dedicated figure/table pages (the placement specs also drop the `p' option).
+\renewcommand{\topfraction}{0.9}
+\renewcommand{\bottomfraction}{0.8}
+\renewcommand{\textfraction}{0.08}
+\renewcommand{\floatpagefraction}{0.8}
+\setcounter{topnumber}{3}
+\setcounter{bottomnumber}{2}
+\setcounter{totalnumber}{5}
+
+\title{\bfseries Terrain Fine-Detail Transition in Lunar Landing Simulations:
+A Comparison of Smoothstep, Gaussian, and Hybrid Blending Methods in Isaac Lab}
+
+\author{Cem \"Ozkurt\thanks{Corresponding author. Institutional e-mail to be
+filled before submission.} \and Ey\"up Altu\u{g} Tun\c{c} \and Muhammed Emin Onay
+\and Haktan Yusuf G\"ulo\u{g}lu\thanks{ORCID 0009-0007-9429-6154.}\\[0.4em]
+\small Sakarya University, National Technology Workshop,\\
+\small Artificial Intelligence Center, T\"urkiye}
+\date{}
+
+\begin{document}
+\maketitle
+
+\begin{abstract}
+\noindent
+\input{abstract}
+\end{abstract}
+
+\noindent\textbf{Keywords:} lunar landing simulation \textbullet{}
+reinforcement learning \textbullet{} Isaac Lab \textbullet{} procedural terrain
+generation \textbullet{} multi-resolution blending \textbullet{} continuity
+analysis
+
+\bigskip
+\input{body}
+\input{backmatter}
+
+\bibliographystyle{plainnat}
+\bibliography{refs}
+
+\end{document}

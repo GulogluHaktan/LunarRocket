@@ -1,0 +1,17 @@
+\begin{table}[htb]
+\centering
+\caption{Per-query computational cost of the fade formula.}
+\label{tab:fadecost}
+\footnotesize
+\setlength{\tabcolsep}{4pt}
+\begin{tabular}{@{}lr@{}}
+\toprule
+Method & Cost (us/query) \\
+\midrule
+\texttt{smoothstep} & 93.12 \\
+\texttt{gaussian\_shipped} & 148.84 \\
+\texttt{gaussian\_calibrated} & 149.61 \\
+\texttt{hybrid} & 407.83 \\
+\bottomrule
+\end{tabular}
+\end{table}
