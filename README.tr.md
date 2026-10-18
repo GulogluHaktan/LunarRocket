@@ -105,4 +105,4 @@ LunarRocket/
   url    = {https://github.com/GulogluHaktan/LunarRocket}
 }
 ```
-Lisans: TODO. İletişim: Haktan Güloğlu.
+Lisans: MIT ([LICENSE](LICENSE)). İletişim: Cem Özkurt (sorumlu yazar), cemozkurt@sakarya.edu.tr.

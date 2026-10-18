@@ -256,6 +256,7 @@ def main():
     add_section(doc, "Data availability", "Heading 1", "Normal", SEC / "12_data_availability.txt")
     add_section(doc, "Code availability", "Heading 1", "Normal", SEC / "13_code_availability.txt")
     add_section(doc, "Author contributions", "Heading 1", "Normal", SEC / "10_author_contributions.txt")
+    add_section(doc, "Declaration of generative AI and AI-assisted technologies", "Heading 1", "Normal", SEC / "18_ai_declaration.txt")
 
     add_references(doc, SEC / "08_references.txt")
 
