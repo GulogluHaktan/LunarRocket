@@ -143,8 +143,13 @@ def main():
     add_title_block(
         doc,
         title=title,
-        authors="Cem Ozkurt, Eyup Altug Tunc, Muhammed Emin Onay, Haktan Yusuf Guloglu",
-        affiliations=["Sakarya University, National Technology Workshop, Artificial Intelligence Center"],
+        authors="Cem Özkurt¹, Muhammed Emin Onay², Eyüp Altuğ Tunç², Ahmet Kutay Küçükler³, Haktan Yusuf Güloğlu³",
+        affiliations=[
+            "¹ Department of Data Science and Analytics, Faculty of Computer and Information Sciences, Sakarya University, Sakarya, Türkiye",
+            "² Department of Computer Engineering, Faculty of Computer and Information Sciences, Sakarya University, Sakarya, Türkiye",
+            "³ Department of Computer Engineering, Sakarya University of Applied Sciences, Sakarya, Türkiye",
+            "ORCID: Özkurt 0000-0002-1251-7715; Onay 0009-0000-0454-4986; Tunç 0009-0007-5166-8077; Küçükler 0009-0007-0202-016X; Güloğlu 0009-0007-9429-6154",
+        ],
         abstract_path=ROOT / "abstract_en.txt",
         keywords=["Lunar landing simulation", "Reinforcement learning", "Isaac Lab",
                   "Procedural terrain generation", "Multi-resolution blending",

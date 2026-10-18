@@ -16,7 +16,7 @@ Eğitim yolu `LunarRocket-Lander-Direct-v0` (`source/lunar_rocket_lab`); sabit a
 | **Problem** | Eğimli/kraterli Ay arazisine hassas, güvenli iniş ve arazi geçiş (terrain blend) kalitesi |
 | **Yöntem** | SAC (Soft Actor-Critic); iki katmanlı arazi karışımı (terrain blend) ve ablasyon çalışmaları |
 | **Simülasyon / donanım** | NVIDIA Isaac Lab (direct workflow), Docker, GPU |
-| **Makale** | `experiments/terrain_transition/paper/` (kaynak ve `out/full_paper_en.pdf`) |
+| **Makale** | [`experiments/terrain_transition/paper/paper_sn/main_sn.pdf`](experiments/terrain_transition/paper/paper_sn/main_sn.pdf) (makale; LaTeX kaynağı aynı klasörde) |
 
 ### Sistem mimarisi
 

@@ -80,12 +80,12 @@ randomize simülasyon ve simülatör seçimi (Muratore vd. 2022, Collins vd.
 (Richard vd. 2024 — OmniLRS, Scorsoglio vd. 2021 — görüntü tabanlı ay inişi
 meta-RL).
 
-**Yazar listesi** HydroGym makalesiyle aynı sıraya getirildi: Haktan Yusuf
-Güloğlu (sorumlu yazar), Eyüp Altuğ Tunç, Muhammed Emin Onay. CRediT rolleri,
-teşekkür/çıkar çatışması/veri erişimi beyanları da çok yazarlıya göre
-güncellendi. `../build_full_paper_en.py` ile üretilen .docx hattı da aynı
-yazar listesini ve 30 kaynağı taşıyor (sanal ortam:
-`../../.venv/bin/python`).
+**Yazar listesi** (2026-10-18, ORCID ve afiliasyonlarla): Cem Özkurt (sorumlu
+yazar; Veri Bilimi ve Analitiği, Sakarya Üniv.), Muhammed Emin Onay ve Eyüp
+Altuğ Tunç (Bilgisayar Müh., Sakarya Üniv.), Ahmet Kutay Küçükler ve Haktan
+Yusuf Güloğlu (Bilgisayar Müh., Sakarya Uygulamalı Bilimler Üniv.). Sıra
+HydroGym makalesiyle aynı. `../build_full_paper_en.py` .docx hattı da aynı
+listeyi taşıyor.
 
 ## Dergi kurallarına uyum (2026-10-07)
 
@@ -93,7 +93,7 @@ Paket Springer Nature'ın zorunlu gereksinimlerine göre yeniden kuruldu:
 
 | Kural | Gereksinim | Durum |
 |---|---|---|
-| Özet uzunluğu | 150-250 kelime | **234** (16 kelime pay) |
+| Özet uzunluğu | 150-250 kelime | **195** (2026-10-18 ölçümü) |
 | Anahtar kelime | 4-6 | **6** |
 | Declarations | Funding, Competing interests, Ethics approval, Consent, Data availability, Code availability, Author contributions — kaynakçadan **önce** | **8 başlığın hepsi var** (`backmatter.tex`) |
 | Şablon | Springer Nature LaTeX önerilir | `main_sn.tex` (`sn-jnl`) |
@@ -111,16 +111,9 @@ yedek tanım taşır, bu yüzden `backmatter.tex` iki derlemede de aynen çalı�
 
 ## Gönderim öncesi kapatılacaklar
 
-- [ ] `main_sn.tex` içindeki `TODO@institutional.address` → kurumsal e-posta
-- [ ] Her yazar için `\orcid{...}` ekle
-- [ ] **Yazar adı biçimi**: bu makale "Haktan Yusuf Güloğlu", HydroGym makalesi
-      "Haktan Güloğlu" diyor. Aynı kişinin iki yayını farklı adla çıkarsa
-      atıf/ORCID eşleşmesi bozulur — birinde karar verilip ikisinde de aynı
-      kullanılmalı. Adı kendim değiştirmedim
-- [ ] **Afiliasyon çelişkisi hâlâ açık**: burada ve HydroGym taslağında
-      "Sakarya University, National Technology Workshop, Artificial Intelligence
-      Center"; HydroGym'in `main.tex`'inde ise "Sakarya University of Applied
-      Sciences". Ayrı tüzel kişilikler — üç yazarın kararı gerekiyor
+- [x] Sorumlu yazar e-postası: cemozkurt@sakarya.edu.tr
+- [ ] Küçükler'in CRediT rolleri taslak (Investigation, Validation, Review & Editing) — kendisiyle teyit edilmeli
+- [ ] ORCID'ler tex'te yorum olarak duruyor; Editorial Manager'da girilecek
 - [ ] `sections/12_data_availability.tex`: "available from the author on
       reasonable request" diyor. Springer açık veriyi tercih eder; depoyu
       yayına açıp DOI vermek daha güçlü olur

@@ -16,7 +16,7 @@ The training path is `LunarRocket-Lander-Direct-v0` (`source/lunar_rocket_lab`);
 | **Problem** | Precise, safe landing on sloped/cratered lunar terrain and terrain-blend quality |
 | **Method** | SAC (Soft Actor-Critic); two-tier terrain blending and ablation studies |
 | **Simulation / hardware** | NVIDIA Isaac Lab (direct workflow), Docker, GPU |
-| **Paper** | `experiments/terrain_transition/paper/` (source and `out/full_paper_en.pdf`) |
+| **Paper** | [`experiments/terrain_transition/paper/paper_sn/main_sn.pdf`](experiments/terrain_transition/paper/paper_sn/main_sn.pdf) (manuscript; LaTeX source in the same folder) |
 
 ### System architecture
 
