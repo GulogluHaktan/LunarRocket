@@ -97,11 +97,14 @@ LunarRocket/
 
 ## Citation, license, contact
 
+[![DOI](https://zenodo.org/badge/DOI/10.5281/zenodo.23452185.svg)](https://doi.org/10.5281/zenodo.23452185)
+
 ```bibtex
 @misc{lunarrocket2026,
-  title  = {LunarRocket},
-  author = {Haktan G{\"u}lo{\u{g}}lu},
+  title  = {LunarRocket: terrain fine-detail transition in lunar landing simulations (Isaac Lab)},
+  author = {{\"O}zkurt, Cem and Onay, Muhammed Emin and Tun{\c{c}}, Ey{\"u}p Altu{\u{g}} and K{\"u}{\c{c}}{\"u}kler, Ahmet Kutay and G{\"u}lo{\u{g}}lu, Haktan Yusuf},
   year   = {2026},
+  doi    = {10.5281/zenodo.23452185},
   url    = {https://github.com/GulogluHaktan/LunarRocket}
 }
 ```
